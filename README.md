@@ -14,11 +14,45 @@ Chatbot Arena ranks LLMs with a Bradley–Terry model and reports a **rank sprea
 
 Semi-synthetic simulation: fit Bradley–Terry on real Arena battles and treat the fit as the truth, keep the real matchups, regenerate outcomes, then compare each procedure's rank intervals against the true ranks over many replications.
 
+## Step 0: reproducing Arena's published leaderboard
+
+Before simulating Arena's method we check that it *is* Arena's method. The two inputs play different roles:
+
+- **Input:** `clean_battle_20240814_public.json` contains only battle records (who played whom, who won, when, prompt tags). It has no ratings, intervals or ranks. We compute those ourselves by fitting arena-rank's Bradley–Terry model.
+- **Answer key:** `elo_results_20240813.pkl` is what the official pipeline (LMSYS's FastChat code) produced: ratings, bootstrap intervals, ranks and the 100 bootstrap fits for each leaderboard (we use text / overall: 128 models, last updated 2024-08-12 09:20 PDT).
+
+The two come from the same source but are not the same data. The official board was computed from LMSYS's internal battle log, while the JSON is the public release of that log, which is missing some battles. For example, `llama-3.1-70b-instruct` has 14,277 anonymous battles in the JSON even before deduplication or the time cutoff, but 14,622 on the board, and only one of the board's hidden pre-release models appears in the JSON. The missing battles are concentrated in the last few weeks. Older models match exactly, and the remaining rating gaps are largest for exactly the models missing battles (see (1) and (2) below).
+
+`step0.py` refits the JSON and runs four checks against the answer key; the full model-by-model comparison is in `results/step0_comparison.csv`.
+
+| Check | How | Result |
+|---|---|---|
+| (1) Same battles | Filter as the official pipeline does (anonymous battles, `dedup_tag.sampled`, up to the snapshot time) and compare battle counts per model | 1,657,517 battles. Older models match exactly or within ±10 battles (91 of 128); models released in the last few weeks have 1–2k fewer battles because the public dump omits some recent battles |
+| (2) Same ratings | Fit arena-rank's `BradleyTerry` (ties = 0.5), then shift so `mixtral-8x7b-instruct-v0.1` = 1114, the 2024 anchor | Median \|diff\| 0.06 points; max 0.3 among models whose battle counts match |
+| (3) Intervals are marginal | (a) Recompute each model's 2.5%/97.5% quantile from the 100 bootstrap fits stored in the pickle; (b) half-width ÷ bootstrap SD, against the multiplier each correction would need | (a) Identical to the published intervals (difference 0). (b) Median 1.90; a normal distribution sampled 100 times gives 1.88, versus 3.55 for Bonferroni and 12.42 for the χ² simultaneous set (M = 128). So the published intervals are per-model 95% intervals with no multiplicity correction |
+| (4) Rank formula | Recompute R_m = 1 + #{m′ : L_m′ > U_m} (Chiang et al., 2024; the rank spread's best end) from the published intervals | Matches up to a constant: published ranks are mostly 5 higher. The gap is ≥ 0 and grows as U_m falls, consistent with ranks computed while 5 unreleased models were still on the board |
+
+Also reported: our sandwich SE ÷ the official bootstrap SD has median 0.98, so the current arena-rank intervals (sandwich, used in Q1) and the 2024 intervals (bootstrap) have about the same width.
+
+**Limitations.** Only the 2024-08 snapshot is checked, so this says nothing direct about the current site. The dedup filter is justified by the matching counts, not by a cited line of code. The 2024 site showed only the best end of the rank spread, so the worst end cannot be checked.
+
 ## Data and code
 
-- [`lmarena-ai/arena-human-preference-140k`](https://huggingface.co/datasets/lmarena-ai/arena-human-preference-140k) — battle-level votes with category tags
-- [`lmarena-ai/leaderboard-dataset`](https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset) — historical leaderboard snapshots with scores and CIs
-- [`lmarena/arena-rank`](https://github.com/lmarena/arena-rank) — Arena's official ranking code
+- `clean_battle_20240814_public.json` — the public LMSYS battle dump released with Chiang et al. (2024)'s notebook (1.8M battles, 2023-04 to 2024-08-14; [download](https://storage.googleapis.com/arena_external_data/public/clean_battle_20240814_public.json)). Battle records only: no ratings. A public version of the log behind the official board, missing some recent battles (see Step 0). Not in the repo; pass its path to `prepare_data.py`.
+- Official leaderboard snapshot `elo_results_20240813.pkl` (ratings, intervals and ranks computed by LMSYS; our answer key in Step 0) from the [`lmarena-ai/chatbot-arena-leaderboard`](https://huggingface.co/spaces/lmarena-ai/chatbot-arena-leaderboard) space (downloaded automatically by Step 0; loaded with an allow-list unpickler).
+- [`lmarena/arena-rank`](https://github.com/lmarena/arena-rank) — Arena's official ranking code; our "Arena method" is exactly its `BradleyTerry` fit.
+
+## Running
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+python prepare_data.py --src ~/Downloads/clean_battle_20240814_public.json   # -> data/battles_20240814.parquet
+python step0.py              # Step 0: reproduce the 2024-08-12 official leaderboard
+python test_simulate.py      # simulator sanity checks
+python q1.py --reps 500      # Q1: coverage of Arena's rank spread (semi-synthetic)
+```
+
+Results go to `results/`.
 
 ## References
 
