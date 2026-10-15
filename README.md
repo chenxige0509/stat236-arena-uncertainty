@@ -36,6 +36,17 @@ Also reported: our sandwich SE ÷ the official bootstrap SD has median 0.98, so 
 
 **Limitations.** Only the 2024-08 snapshot is checked, so this says nothing direct about the current site. The dedup filter is justified by the matching counts, not by a cited line of code. The 2024 site showed only the best end of the rank spread, so the worst end cannot be checked.
 
+## Q1: coverage of Arena's rank spread
+
+Semi-synthetic simulation: the arena-rank fit on the Step 0 battles is the truth, the real matchups (3,457 pairs, 1.66M battles) are kept, outcomes are redrawn 1,000 times, and Arena's method is rerun each time. Full write-up with figures: [`docs/q1.md`](docs/q1.md).
+
+| | Per model | All 129 models at once |
+|---|---|---|
+| Score intervals | 0.948 | 0.003 |
+| Rank spreads | 0.999 | 0.909 ± 0.009 |
+
+Each score interval is valid on its own, but they almost never all hold at once. The overlap rule absorbs most of those misses, so the rank spread is too conservative for a single model (99.9%) and slightly short for the whole table (91%). Rank stability depends mainly on crowding (how many models have nearly the same strength) and data per model, not on strength itself. The simulation is idealized (independent battles, exact BT, fixed strengths), so real coverage is probably lower.
+
 ## Data and code
 
 - `clean_battle_20240814_public.json` — the public LMSYS battle dump released with Chiang et al. (2024)'s notebook (1.8M battles, 2023-04 to 2024-08-14; [download](https://storage.googleapis.com/arena_external_data/public/clean_battle_20240814_public.json)). Battle records only: no ratings. A public version of the log behind the official board, missing some recent battles (see Step 0). Not in the repo; pass its path to `prepare_data.py`.
@@ -49,7 +60,9 @@ python3 -m venv .venv && source .venv/bin/activate && pip install -r requirement
 python prepare_data.py --src ~/Downloads/clean_battle_20240814_public.json   # -> data/battles_20240814.parquet
 python step0.py              # Step 0: reproduce the 2024-08-12 official leaderboard
 python test_simulate.py      # simulator sanity checks
-python q1.py --reps 500      # Q1: coverage of Arena's rank spread (semi-synthetic)
+python q1.py --reps 1000     # Q1: coverage of Arena's rank spread (semi-synthetic)
+python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
+python q1_figures.py         # figures for docs/q1.md
 ```
 
 Results go to `results/`.
