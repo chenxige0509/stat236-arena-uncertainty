@@ -1,0 +1,47 @@
+world: M=129 models, 1,657,517 battles/replicate, 41.9% of model pairs observed, tie rate 0.345
+  100/1000 replicates, 19s
+  200/1000 replicates, 38s
+  300/1000 replicates, 56s
+  400/1000 replicates, 75s
+  500/1000 replicates, 95s
+  600/1000 replicates, 114s
+  700/1000 replicates, 134s
+  800/1000 replicates, 154s
+  900/1000 replicates, 173s
+  1000/1000 replicates, 193s
+                                                                         value     mc_se
+models                                                                     129       NaN
+replicates                                                                1000       NaN
+battles per replicate                                                1.658e+06       NaN
+share of model pairs observed                                           0.4187       NaN
+tie rate                                                                0.3448       NaN
+score CI coverage, per model (nominal 0.95)                             0.9484 0.0006774
+score CIs: all cover (simultaneous)                                      0.003   0.00173
+score CIs missing per replicate                                           6.65   0.08738
+rank spread coverage, per model                                         0.9992 8.439e-05
+rank spread coverage, worst model                                        0.991  0.002986
+rank spread coverage, simultaneous (all models)                          0.909    0.0091
+rank spreads missing per replicate                                       0.103   0.01089
+share of misses with spread below truth                                  0.466       NaN
+rank spread width, mean (simulated)                                       7.99   0.00481
+rank spread width, mean (real data fit)                                  7.946       NaN
+point-estimate rank exact, share of models                              0.4546   0.00157
+[rank spreads don't overlap] orderings declared per replicate             7433    0.8546
+[rank spreads don't overlap] false orderings per replicate               0.006  0.002443
+[rank spreads don't overlap] P(any false ordering)                       0.006  0.002443
+[rank spreads don't overlap] power: share of true orderings declared    0.9003 0.0001035
+[score CIs don't overlap] orderings declared per replicate                7805    0.3102
+[score CIs don't overlap] false orderings per replicate                  0.204   0.01768
+[score CIs don't overlap] P(any false ordering)                          0.155   0.01145
+[score CIs don't overlap] power: share of true orderings declared       0.9454 3.764e-05
+
+lowest rank-spread coverage:
+                    model  true_rating  true_rank  battles  se_mean  ci_coverage  rs_coverage  miss_below  miss_above  mean_best  mean_worst  mean_width  real_best  real_worst
+   codellama-70b-instruct      931.205        100   1193.0    7.827        0.944        0.991       0.005       0.004     92.359     109.196      17.837         93         108
+                 claude-1     1037.697         48  21172.0    2.002        0.939        0.993       0.006       0.001     45.779      52.931       8.152         46          53
+       gpt-3.5-turbo-0314      995.144         69   5655.0    4.022        0.943        0.994       0.006       0.000     62.418      75.158      13.740         62          74
+gemini-1.5-flash-api-0514     1115.949         19  55431.0    1.284        0.940        0.995       0.005       0.000     19.005      20.813       2.808         19          20
+      reka-flash-20240722     1087.747         31   6282.0    3.564        0.932        0.995       0.000       0.005     25.376      32.803       8.427         25          31
+         falcon-180b-chat      923.192        107   1325.0    7.381        0.934        0.995       0.001       0.004     95.524     110.596      16.072         96         111
+              guanaco-33b      921.196        108   3003.0    5.148        0.941        0.995       0.000       0.005     97.585     110.008      13.423         97         111
+        gpt-4o-2024-08-06     1148.038          9   7396.0    3.297        0.954        0.996       0.002       0.002      6.037      13.303       8.266          6          13

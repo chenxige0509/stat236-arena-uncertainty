@@ -1,0 +1,25 @@
+,value,mc_se
+models,129.0,
+replicates,1000.0,
+battles per replicate,1657517.0,
+share of model pairs observed,0.41872577519379844,
+tie rate,0.3447578516540102,
+"score CI coverage, per model (nominal 0.95)",0.9484496124031007,0.0006773586071790158
+score CIs: all cover (simultaneous),0.003,0.0017303161543469432
+score CIs missing per replicate,6.65,0.08737926032609304
+"rank spread coverage, per model",0.9992015503875968,8.438920392258821e-05
+"rank spread coverage, worst model",0.991,0.0029864694875387575
+"rank spread coverage, simultaneous (all models)",0.909,0.009099549538400338
+rank spreads missing per replicate,0.103,0.010886207306013859
+share of misses with spread below truth,0.46601941747572817,
+"rank spread width, mean (simulated)",7.990248062015504,0.004809566054014595
+"rank spread width, mean (real data fit)",7.945736434108527,
+"point-estimate rank exact, share of models",0.4545736434108527,0.0015700194920514568
+[rank spreads don't overlap] orderings declared per replicate,7433.219,0.8546071567640845
+[rank spreads don't overlap] false orderings per replicate,0.006,0.002443352199329841
+[rank spreads don't overlap] P(any false ordering),0.006,0.002443352199329841
+[rank spreads don't overlap] power: share of true orderings declared,0.9003407218992248,0.00010352159216446175
+[score CIs don't overlap] orderings declared per replicate,7805.129,0.310217010483941
+[score CIs don't overlap] false orderings per replicate,0.204,0.017683232077216445
+[score CIs don't overlap] P(any false ordering),0.155,0.01145015747079952
+[score CIs don't overlap] power: share of true orderings declared,0.9453639777131781,3.764170733150603e-05
