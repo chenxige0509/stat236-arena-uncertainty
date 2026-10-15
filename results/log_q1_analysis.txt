@@ -1,0 +1,53 @@
+129 models, 1000 replicates
+
+Spearman correlation, drivers (rows) x outcomes (columns):
+                         rank_sd  p_rank_exact  spread_width
+true_rank                   0.21         -0.16          0.23
+battles                    -0.34          0.21         -0.28
+se                          0.32         -0.20          0.27
+opponents                  -0.03         -0.06          0.04
+neighbours_within_10pts     0.71         -0.72          0.79
+neighbours_within_2se       0.92         -0.84          0.95
+nearest_gap_in_se          -0.63          0.76         -0.50
+era                        -0.18          0.13         -0.18
+
+Correlation among drivers (Spearman):
+                         true_rank  battles    se  opponents  neighbours_within_10pts  neighbours_within_2se  nearest_gap_in_se   era
+true_rank                     1.00    -0.63  0.64      -0.31                    -0.00                   0.20               0.03 -0.79
+battles                      -0.63     1.00 -1.00       0.77                     0.13                  -0.26               0.04  0.47
+se                            0.64    -1.00  1.00      -0.77                    -0.14                   0.25              -0.03 -0.47
+opponents                    -0.31     0.77 -0.77       1.00                     0.33                   0.05              -0.11  0.16
+neighbours_within_10pts      -0.00     0.13 -0.14       0.33                     1.00                   0.74              -0.51 -0.02
+neighbours_within_2se         0.20    -0.26  0.25       0.05                     0.74                   1.00              -0.54 -0.14
+nearest_gap_in_se             0.03     0.04 -0.03      -0.11                    -0.51                  -0.54               1.00  0.00
+era                          -0.79     0.47 -0.47       0.16                    -0.02                  -0.14               0.00  1.00
+
+By true-rank tier (means):
+            battles    se  opponents  neighbours_within_10pts  neighbours_within_2se  rank_sd  p_rank_exact  spread_width
+true_rank                                                                                                                
+1-10       37376.10  1.88      46.80                     4.10                   1.70     0.44          0.77          3.70
+11-30      50331.75  1.99      59.65                     6.85                   4.15     0.89          0.48          6.07
+31-60      35178.17  1.96      61.77                     7.80                   4.20     1.09          0.43          6.79
+61-100     17152.30  2.99      56.98                     9.82                   8.28     1.66          0.30         12.09
+101-129     6662.10  4.17      38.66                     3.97                   4.38     1.04          0.57          6.37
+
+OLS on standardized drivers, crowding = ['neighbours_within_10pts']; coefficient (t-stat):
+                               rank_sd   p_rank_exact   spread_width
+const                    +1.18 (+36.8)  +0.45 (+37.7)  +7.99 (+56.2)
+true_rank                 -0.09 (-1.5)   -0.02 (-0.8)   +0.29 (+1.1)
+se                        +0.65 (+9.8)   -0.12 (-4.7)   +2.62 (+8.9)
+opponents                 +0.19 (+3.5)   -0.05 (-2.3)   +0.70 (+2.8)
+era                       +0.02 (+0.5)   -0.04 (-2.1)   +0.34 (+1.5)
+neighbours_within_10pts  +0.53 (+15.1)  -0.19 (-14.0)  +3.31 (+21.0)
+R^2                               0.78           0.70           0.85
+
+OLS on standardized drivers, crowding = ['neighbours_within_2se', 'nearest_gap_in_se']; coefficient (t-stat):
+                             rank_sd   p_rank_exact   spread_width
+const                  +1.18 (+53.1)  +0.45 (+48.9)  +7.99 (+68.9)
+true_rank               -0.11 (-2.6)   -0.03 (-1.5)   +0.08 (+0.4)
+se                      +0.22 (+4.3)   +0.02 (+0.9)   +0.26 (+1.0)
+opponents               +0.06 (+1.4)   -0.00 (-0.1)   +0.13 (+0.6)
+era                     -0.03 (-0.7)   -0.03 (-2.1)   +0.11 (+0.6)
+neighbours_within_2se  +0.57 (+18.5)  -0.14 (-10.8)  +3.66 (+22.9)
+nearest_gap_in_se       -0.14 (-5.1)   +0.11 (+9.8)   -0.17 (-1.2)
+R^2                             0.89           0.82           0.90
