@@ -47,6 +47,20 @@ Semi-synthetic simulation: the arena-rank fit on the Step 0 battles is the truth
 
 Each score interval is valid on its own, but they almost never all hold at once. The overlap rule absorbs most of those misses, so the rank spread is too conservative for a single model (99.9%) and slightly short for the whole table (91%). Rank stability depends mainly on crowding (how many models have nearly the same strength) and data per model, not on strength itself. The simulation is idealized (independent battles, exact BT, fixed strengths), so real coverage is probably lower.
 
+## Q2: multiplicity-corrected procedures (in progress)
+
+The same 1,000 simulated datasets as Q1, with each correction applied side by side. Write-ups: [`notebook/q2_bonferroni.ipynb`](notebook/q2_bonferroni.ipynb) and [`notebook/q2_chi2.ipynb`](notebook/q2_chi2.ipynb). Pairwise tests with Holm/BH are not done yet.
+
+| | Arena | Bonferroni | χ² Scheffé | χ² projection |
+|---|---|---|---|---|
+| Multiplier | 1.96 | 3.55 | 12.47 | 12.47 |
+| All rank spreads right at once | 0.909 | 1.000 | 1.000 | 1.000 |
+| Mean rank spread width (ranks) | 8.0 | 13.6 | 33.1 | 43.4 |
+| True orderings declared | 0.945 | 0.901 | 0.749 | 0.669 |
+| Top model's rank spread, real 2024 board | 1–1 | 1–2 | 1–4 | 1–10 |
+
+All three corrections reach the 95% target, but they overshoot. In the multiplier sweep, z ≈ 2.1 already makes all rank spreads right 95% of the time with 6% more width, because Arena's overlap rule supplies most of the protection. Bonferroni widens the rank spreads by 71%. The χ² simultaneous set of Chiang et al. (2024) protects the whole 129-dimensional score vector, which is far more than a ranking needs. Projected onto each model, it gives rank spreads 3.2 times as wide as Bonferroni's. Reading the same set through pairwise differences (Scheffé), which uses the covariances, reduces this to 2.4 times. The z ≈ 2.1 benchmark uses the true ranks, so it is not a procedure that can be applied to real data. Same idealized simulation as Q1.
+
 ## Data and code
 
 - `clean_battle_20240814_public.json` — the public LMSYS battle dump released with Chiang et al. (2024)'s notebook (1.8M battles, 2023-04 to 2024-08-14; [download](https://storage.googleapis.com/arena_external_data/public/clean_battle_20240814_public.json)). Battle records only: no ratings. A public version of the log behind the official board, missing some recent battles (see Step 0). Not in the repo; pass its path to `prepare_data.py`.
@@ -63,6 +77,8 @@ python test_simulate.py      # simulator sanity checks
 python q1.py --reps 1000     # Q1: coverage of Arena's rank spread (semi-synthetic)
 python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
 python q1_figures.py         # figures for docs/q1.md
+python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe   # Q2: corrected procedures
+pip install jupyter && jupyter nbconvert --to notebook --execute --inplace notebook/q2_*.ipynb   # Q2 write-ups
 ```
 
 Results go to `results/`.
