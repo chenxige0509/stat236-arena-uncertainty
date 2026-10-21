@@ -7,7 +7,9 @@ Procedures: run side by side on every simulated dataset. Each maps one fit to a 
             which for score intervals with above = (L_i > U_j) is exactly Arena's rank spread.
   arena       marginal 95% sandwich CIs (the method Q1 evaluates)
   bonferroni  z_{1 - alpha/(2M)} in place of z_{1 - alpha/2}
-  chi2, holm, bh: stubs below, to be filled in; then pass them with --procedures
+  chi2        Chiang et al.'s chi^2 simultaneous set projected onto each model: z = sqrt(chi^2_{M-1, 1-alpha})
+  chi2_scheffe  the same set, i above j when beta_i > beta_j on the whole set (uses the full covariance)
+  holm, bh: stubs below, to be filled in; then pass them with --procedures
 Sweep:      rank spreads from beta_hat +- z SE over a grid of z, to find the smallest z at which simultaneous coverage
             reaches 95%. This is an oracle benchmark (it needs the truth), not a procedure: it measures how much of
             Bonferroni's widening the rank spreads actually need.
@@ -21,7 +23,7 @@ import os
 import time
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+from scipy.stats import norm, chi2
 from arena_rank.utils.data_utils import PairDataset
 from arena_data import load_battles, load_official
 from ranking import fit_arena, rank_spread, point_rank
@@ -54,8 +56,24 @@ def bonferroni(est, V):
 
 def chi2_set(est, V):
     """chi^2 simultaneous set of Chiang et al. (2024), {beta: (beta_hat - beta)' V^-1 (beta_hat - beta) <= chi^2_{M-1, 1-alpha}},
-    projected onto each model. TODO (Q2): return from_intervals(L, U)."""
-    raise NotImplementedError
+    projected onto each model. The projection of that ellipsoid onto coordinate m is beta_hat_m +- sqrt(c V_mm), so this
+    is Arena's rule with z = sqrt(chi^2_{M-1, 1-alpha}) (12.47 at M = 129). M - 1 degrees of freedom because
+    sum(beta) = 0 leaves V with rank M - 1. All M projections hold whenever the true beta is in the set."""
+    c = chi2.ppf(1 - LEVEL, len(est) - 1)
+    r, se = est.ratings.values, np.sqrt(np.diag(V))
+    return from_intervals(r - np.sqrt(c) * se, r + np.sqrt(c) * se)
+
+
+def chi2_scheffe(est, V):
+    """The same chi^2 set read through pairwise contrasts (Scheffe): i above j when beta_i > beta_j everywhere on the
+    ellipsoid, i.e. beta_hat_i - beta_hat_j > sqrt(c) SE(beta_hat_i - beta_hat_j), with Var = V_ii + V_jj - 2 V_ij.
+    Valid for the same reason as chi2_set (every contrast holds when beta is in the set), and it declares every
+    ordering chi2_set does, since SE(diff) <= SE_i + SE_j. Unlike the overlap rule it uses the covariances.
+    Keeps chi2_set's projected score intervals for the score-coverage rows."""
+    c = chi2.ppf(1 - LEVEL, len(est) - 1)
+    r, v = est.ratings.values, np.diag(V)
+    var_diff = np.maximum(v[:, None] + v[None, :] - 2 * V, 0)
+    return chi2_set(est, V) | {"above": r[:, None] - r[None, :] > np.sqrt(c * var_diff)}
 
 
 def pairwise(est, V, correction):
@@ -64,9 +82,9 @@ def pairwise(est, V, correction):
     raise NotImplementedError
 
 
-PROCEDURES = {"arena": arena, "bonferroni": bonferroni, "chi2": chi2_set,
+PROCEDURES = {"arena": arena, "bonferroni": bonferroni, "chi2": chi2_set, "chi2_scheffe": chi2_scheffe,
               "holm": lambda est, V: pairwise(est, V, "holm"), "bh": lambda est, V: pairwise(est, V, "bh")}
-NEEDS_COV = {"chi2", "holm", "bh"}
+NEEDS_COV = {"chi2", "chi2_scheffe", "holm", "bh"}
 
 
 def ranks_from_orderings(above):
