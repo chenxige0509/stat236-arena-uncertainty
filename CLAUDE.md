@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-STAT 236 final project: how reliable are Chatbot Arena's rank spreads, which are built from per-model 95% Bradley–Terry intervals with no multiplicity correction? There are three research questions (see README and `docs/Proposal-Draft.pdf`). Step 0 and Q1 are done. Q2 (multiplicity-corrected procedures) is in progress: `q2.py` has Arena's method, Bonferroni, the χ² simultaneous set (projected per model, `chi2`, and read through Scheffé pairwise contrasts, `chi2_scheffe`) and a multiplier sweep; the pairwise Holm/BH procedures are stubs. The χ² procedures have not been run yet. Q3 (category effects) is not implemented yet. The data differ from the proposal: the proposal names `arena-human-preference-140k` and `leaderboard-dataset`, but the code uses the 2024-08-14 public dump and the 2024-08-13 official snapshot, because that pair lets Step 0 check the pipeline against an answer key computed from the same battles. The method is a semi-synthetic simulation: fit BT on the real battles, treat that fit as the truth, keep the real matchups, redraw the outcomes, rerun Arena's method, and check its intervals against the true ranks.
+STAT 236 final project: how reliable are Chatbot Arena's rank spreads, which are built from per-model 95% Bradley–Terry intervals with no multiplicity correction? There are three research questions (see README and `docs/Proposal-Draft.pdf`). Step 0 and Q1 are done. Q2 (multiplicity-corrected procedures) is in progress: `q2.py` has Arena's method, Bonferroni, the χ² simultaneous set (projected per model, `chi2`, and read through Scheffé pairwise contrasts, `chi2_scheffe`) and a multiplier sweep; the pairwise Holm/BH procedures are stubs. `results/q2_*` hold Arena, Bonferroni and both χ² procedures; `notebook/q2_bonferroni.ipynb` covers only Arena and Bonferroni, and the χ² results are not written up yet. Q3 (category effects) is not implemented yet. The data differ from the proposal: the proposal names `arena-human-preference-140k` and `leaderboard-dataset`, but the code uses the 2024-08-14 public dump and the 2024-08-13 official snapshot, because that pair lets Step 0 check the pipeline against an answer key computed from the same battles. The method is a semi-synthetic simulation: fit BT on the real battles, treat that fit as the truth, keep the real matchups, redraw the outcomes, rerun Arena's method, and check its intervals against the true ranks.
 
 ## Commands
 
@@ -18,13 +18,15 @@ python test_simulate.py      # simulator sanity checks (plain asserts, no test f
 python q1.py --reps 1000     # ~3 min; --tie-rate 0 for binary outcomes, --seed N
 python q1_analysis.py        # reads results/q1.npz
 python q1_figures.py         # reads results/q1.npz + q1_analysis_per_model.csv -> docs/figures/q1_*.png
-python q2.py --reps 1000     # ~5 min; --procedures arena,bonferroni[,chi2,chi2_scheffe,holm,bh]
+python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe   # ~4 min; produces the committed results/q2_*
 jupyter nbconvert --to notebook --execute --inplace notebook/q2_bonferroni.ipynb   # Bonferroni report; reads results/q2_* only
 ```
 
+`q2.py` rewrites every `results/q2_*` file with only the procedures it was given, and `--procedures` defaults to `arena,bonferroni`. Running it without the flag drops the χ² columns from the committed results.
+
 Jupyter is not in `requirements.txt`. Install it separately with `pip install jupyter`.
 
-The pinned numpy and pandas need Python ≥ 3.11 (`/opt/homebrew/bin/python3.12` on this machine). The system `python3` is 3.9.
+The pinned numpy and pandas need Python ≥ 3.11 (e.g. `/opt/homebrew/bin/python3.12` or `~/.local/bin/python3.12`, depending on the machine). The system `python3` is 3.9.
 
 `data/` is gitignored. Every script except `prepare_data.py` needs the parquet file, and the first call to `load_official()` downloads the official pickle into `data/official/`. `results/` and `docs/figures/` are committed, so rerunning a script changes tracked files.
 
