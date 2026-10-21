@@ -1,0 +1,15 @@
+,arena,arena_mc_se,bonferroni,bonferroni_mc_se
+"score CI coverage, per model",0.9484496124031007,0.0006773586071790158,0.9995581395348838,5.8939615719075185e-05
+score CIs: all cover (simultaneous),0.003,0.0017303161543469432,0.945,0.0072129762946392005
+"rank interval coverage, per model",0.9992015503875968,8.438920392258821e-05,1.0,0.0
+"rank interval coverage, worst model",0.991,0.0029864694875387575,1.0,0.0
+"rank interval coverage, simultaneous (all models)",0.909,0.009099549538400338,1.0,0.0
+"rank interval width, mean",7.990248062015504,0.004809566054014595,13.64737984496124,0.005740697505731224
+[declared orderings] orderings per replicate,7805.129,0.310217010483941,7440.244,0.37027498911966433
+[declared orderings] false orderings per replicate,0.204,0.017683232077216445,0.0,0.0
+[declared orderings] P(any false ordering),0.155,0.01145015747079952,0.0,0.0
+[declared orderings] power: share of true orderings declared,0.9453639777131781,3.764170733150603e-05,0.9011923449612402,4.484919926352534e-05
+[rank intervals don't overlap] orderings per replicate,7433.219,0.8546071567640845,6718.824,1.0467103833566507
+[rank intervals don't overlap] false orderings per replicate,0.006,0.002443352199329841,0.0,0.0
+[rank intervals don't overlap] P(any false ordering),0.006,0.002443352199329841,0.0,0.0
+[rank intervals don't overlap] power: share of true orderings declared,0.9003407218992248,0.00010352159216446175,0.8138110465116278,0.0001267817809298268
