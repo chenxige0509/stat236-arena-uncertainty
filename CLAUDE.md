@@ -20,10 +20,10 @@ python q1_analysis.py        # reads results/q1.npz
 python q1_figures.py         # reads results/q1.npz + q1_analysis_per_model.csv -> docs/figures/q1_*.png
 python test_pairwise.py      # pairwise.py vs statsmodels, nesting, transitivity, real-fit checks (--no-data skips the last)
 python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm   # ~3–4 min; produces the committed results/q2_*
-python q2.py --reps 1000 --tiers 20 --procedures <same list>   # stress worlds, also --tiers 10, --beta-scale 0.5/0.25/0.1/0
+python q2.py --reps 1000 --tiers 20 --procedures <same list>   # stress worlds, also --tiers 10, --tiers 20 --tier-spread 0.05/0.1/0.2, --beta-scale 0.5/0.25/0.1/0
 jupyter nbconvert --to notebook --execute --inplace notebook/q2_bonferroni.ipynb   # Bonferroni report; reads results/q2_* only
 jupyter nbconvert --to notebook --execute --inplace notebook/q2_chi2.ipynb         # χ² report; needs the chi2 columns in results/q2_*
-jupyter nbconvert --to notebook --execute --inplace notebook/q2_holm.ipynb         # Holm report; needs the pairwise columns and the six stress-test summaries
+jupyter nbconvert --to notebook --execute --inplace notebook/q2_holm.ipynb         # Holm report; needs the pairwise columns and the nine stress-test summaries
 ```
 
 `q2.py` rewrites every `results/q2_*` file with only the procedures it was given, and `--procedures` defaults to `arena,bonferroni`. Running it without the full list drops columns from the committed results that the notebooks need. The real-data files (`q2_real.csv`, `q2_real_pairs.csv`, `q2_real_cov.npz`) are written only for the default world. The stress-test `.npz` files are gitignored (about 3 MB each); their CSVs are committed.
@@ -53,7 +53,7 @@ The pipeline: `step0.py` validates the method against the official answer key. `
 - Recent models have 1–2k fewer battles than the official `num_battles` because the public dump omits some recent battles. Published `final_ranking` is mostly 5 higher than R_m recomputed from the published intervals. The data are consistent with the board having been ranked while 5 hidden models were still listed.
 - In `rank_spread`, `worst` has no explicit `+1` because the count includes the model itself (U_m > L_m).
 - Every corrected procedure has 100% simultaneous coverage in the default world. This is not a bug: wrong orderings need nearly tied pairs, and the 2024 strengths have few of them. The `--tiers` worlds are where the bounds are tight (Holm ≈ 97%).
-- The two-sided `holm` declares orderings by sign after a two-sided test. Its control of wrong directions under correlation is not a theorem (`holm_onesided` is); the stress tests check it empirically.
+- The two-sided `holm` declares orderings by sign after a two-sided test. Its control of wrong directions under correlation is not a theorem (`holm_onesided` is). Exact ties are covered by Holm's theorem; the near-tie worlds (`--tiers 20 --tier-spread f`) check the unproven case empirically.
 
 ## Conventions
 

@@ -63,7 +63,14 @@ Here z is a pair's score gap divided by the standard error of that gap, which us
 
 All the corrections reach the 95% target, but they overshoot. In the multiplier sweep, z ≈ 2.1 already makes all rank spreads right 95% of the time with 6% more width, because Arena's overlap rule supplies most of the protection. Bonferroni widens the rank spreads by 71%. The χ² simultaneous set of Chiang et al. (2024) protects the whole 129-dimensional score vector, which is far more than a ranking needs. Projected onto each model, it gives rank spreads 3.2 times as wide as Bonferroni's. Reading the same set through pairwise differences (Scheffé), which uses the covariances, reduces this to 2.4 times. The z ≈ 2.1 benchmark uses the true ranks, so it is not a procedure that can be applied to real data. Same idealized simulation as Q1.
 
-Testing each of the 8,256 pairs directly, with Holm's step-down correction, gives the narrowest valid rank spreads so far: 18% narrower than Bonferroni's. Testing each gap directly instead of checking whether intervals overlap saves 0.9 ranks. Holm's step-down saves 1.5 more, because thousands of clearly different pairs lower the bar for the rest. The textbook (two-sided) Holm is not proven to control wrong directions under correlation. A one-sided version that is proven narrows the spreads only to 12.4. Stress-test worlds with exact ties among the models are where these guarantees are tight. There Holm still gets all rank spreads right in at least 96.6% of datasets, while Arena falls to 7–24%. On the real board, Holm cannot support 223 of the 7,808 orderings Arena declares, and it cannot separate any pair Arena calls tied.
+Testing each of the 8,256 pairs directly, with Holm's step-down correction, gives the narrowest valid rank spreads so far: 18% narrower than Bonferroni's. Testing each gap directly instead of checking whether intervals overlap saves 0.9 ranks. Holm's step-down saves 1.5 more, because thousands of clearly different pairs lower the bar for the rest. The textbook (two-sided) Holm controls the chance of ordering an exactly tied pair. But it is not proven to control wrong directions for pairs that are close and not tied, when the tests are correlated. A one-sided version that is proven narrows the spreads only to 12.4.
+
+Nine stress-test worlds with the same battles and different true strengths put this to the test:
+
+- **Exact ties:** in tiers of exactly tied models, where the error bounds are tight, Holm gets all rank spreads right in at least 96.6% of datasets. Arena falls to 7–24%, and to 0.2% when all models are tied.
+- **Near ties:** in tiers of nearly tied models, which is the unproven case, Holm gets all rank spreads right in at least 99.4%.
+
+On the real battles, Holm does not support 223 of the 7,808 orderings that Arena's method declares. It separates no pair that Arena shows as tied, whether a tie means overlapping score intervals or overlapping rank spreads. All guarantees are asymptotic (normal approximation).
 
 ## Data and code
 
@@ -83,7 +90,9 @@ python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
 python q1_figures.py         # figures for docs/q1.md
 python test_pairwise.py      # Q2 pairwise procedures: checks against statsmodels
 python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm   # Q2
-python q2.py --reps 1000 --tiers 20 --procedures ...   # Q2 stress tests: also --tiers 10, --beta-scale 0.5 / 0.25 / 0.1 / 0
+for a in "--beta-scale 0.5" "--beta-scale 0.25" "--beta-scale 0.1" "--tiers 20" "--tiers 10" "--beta-scale 0"; do
+  python q2.py --reps 1000 $a --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm
+done                         # Q2 stress-test worlds (about 4 min each)
 pip install jupyter && jupyter nbconvert --to notebook --execute --inplace notebook/q2_*.ipynb   # Q2 write-ups
 ```
 

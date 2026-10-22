@@ -1,14 +1,14 @@
-world: M=129 models, 1,657,517 battles/replicate, tie rate 0.345, strengths x 1; procedures ['arena', 'bonferroni', 'chi2', 'chi2_scheffe', 'pairwise_bonferroni', 'holm_onesided', 'holm']; Bonferroni z = 3.548
-  100/1000 replicates, 25s
-  200/1000 replicates, 52s
-  300/1000 replicates, 78s
-  400/1000 replicates, 104s
-  500/1000 replicates, 129s
-  600/1000 replicates, 154s
-  700/1000 replicates, 178s
-  800/1000 replicates, 203s
-  900/1000 replicates, 228s
-  1000/1000 replicates, 251s
+world: M=129 models, 1,657,517 battles/replicate, tie rate 0.345, strengths x 1 (0 tied pairs); procedures ['arena', 'bonferroni', 'chi2', 'chi2_scheffe', 'pairwise_bonferroni', 'holm_onesided', 'holm']; Bonferroni z = 3.548
+  100/1000 replicates, 19s
+  200/1000 replicates, 38s
+  300/1000 replicates, 57s
+  400/1000 replicates, 75s
+  500/1000 replicates, 94s
+  600/1000 replicates, 112s
+  700/1000 replicates, 131s
+  800/1000 replicates, 150s
+  900/1000 replicates, 169s
+  1000/1000 replicates, 187s
 arena rank spreads identical to the first 1000 replicates in results/q1.npz: True
 
 summary (1000 replicates; Monte Carlo SEs in results/q2_summary.csv):

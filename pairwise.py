@@ -11,15 +11,19 @@ interval holds (best_m <= true rank <= worst_m for all m), so P(any false orderi
 coverage >= 1 - alpha. The procedures differ in how they guarantee that:
 
   pairwise_bonferroni  two-sided test of each pair at alpha / K, K = M(M-1)/2. P(any false ordering) <= alpha under
-                       any dependence, ties allowed (a wrong direction needs a rejection in the wrong tail).
+                       any dependence, ties allowed (a false ordering needs |z| beyond the bar with the wrong sign).
   holm                 Holm (1979) step-down on the K two-sided p-values; the k-th smallest is compared with
                        alpha / (K - k + 1). This is the textbook version the proposal names. Holm controls the chance
-                       of rejecting a true H0, but here there are none; control of wrong directions after a two-sided
-                       Holm is proven for independent statistics (Shaffer 1980), not for the correlated z_ij here.
-                       The simulation checks it empirically.
+                       of rejecting a true H0 (exactly tied pairs), but not wrong directions for pairs that are close
+                       and not tied. That is proven only for independent statistics under conditions normal ones meet
+                       (Shaffer 1980); pairwise z_ij that share a model are never independent, and for dependent
+                       statistics it is open (Finner 1999; Guo and Romano). q2.py --tiers T --tier-spread f builds
+                       worlds with many such near-ties to check it empirically.
   holm_onesided        Holm on the M(M-1) one-sided hypotheses H_ij: beta_i <= beta_j ("i is not above j"). Rejecting
                        H_ij is exactly declaring i above j, so this controls P(any false ordering) <= alpha under any
-                       dependence and with ties, by Holm's own theorem. The k-th largest |z| is compared with the
+                       dependence and with ties, by Holm's own theorem.
+
+All guarantees are asymptotic: they treat z_ij as normal with the plug-in sandwich covariance. The k-th largest |z| is compared with the
                        one-sided alpha / (2K - k + 1): it starts at the pairwise Bonferroni threshold and relaxes only
                        half as fast as the two-sided Holm.
 

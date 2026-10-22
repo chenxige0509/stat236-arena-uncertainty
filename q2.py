@@ -24,11 +24,14 @@ Stress tests (same graph and battle counts, only the true strengths change):
             strength, so models in a tier are exactly tied. Exact ties are where FWER bounds are tight: any ordering
             declared inside a tier is false. The true rank of tied models is their shared best rank (1 + #strictly
             above), and a rank interval still holds whenever no false ordering is declared.
+            --tier-spread f (with --tiers) keeps a fraction f of each model's distance from its tier mean, so models in a
+            tier are nearly but not exactly tied. Every error inside a tier is then a wrong direction, the case the
+            two-sided Holm has no proof for (pairwise.py).
 
-    python q2.py --reps 1000 [--procedures arena,bonferroni] [--tie-rate 0] [--beta-scale 1] [--tiers T] [--seed 0]
+    python q2.py --reps 1000 [--procedures arena,bonferroni] [--tie-rate 0] [--beta-scale 1] [--tiers T [--tier-spread f]] [--seed 0]
 Writes results/q2{tag}_summary.csv, q2{tag}_per_model.csv, q2{tag}_sweep.csv, q2{tag}.npz, and, for the default world,
 q2_real.csv (per model), q2_real_pairs.csv (per pair: z and each procedure's verdict) and q2_real_cov.npz (the real fit's
-ratings and full covariance). tag = "" for the default world, else _tie{t}, _scale{s} and/or _tiers{T}.
+ratings and full covariance). tag = "" for the default world, else _tie{t}, _scale{s} and/or _tiers{T}[s{f}].
 """
 import argparse
 import os
@@ -117,6 +120,7 @@ ap.add_argument("--procedures", default="arena,bonferroni", help=f"comma-separat
 ap.add_argument("--tie-rate", type=float, default=None, help="default: observed tie share; 0 = binary outcomes")
 ap.add_argument("--beta-scale", type=float, default=1.0, help="multiply the true strengths by this (stress test)")
 ap.add_argument("--tiers", type=int, default=0, help="replace the strengths by T tiers of tied models (stress test)")
+ap.add_argument("--tier-spread", type=float, default=0.0, help="with --tiers: keep this fraction of the within-tier spread")
 ap.add_argument("--seed", type=int, default=0)
 args = ap.parse_args()
 procs = args.procedures.split(",")
@@ -136,7 +140,7 @@ pairs, n = pair_counts(battles, names)
 beta_true = args.beta_scale * real.beta.values
 if args.tiers:
     for g in np.array_split(np.argsort(-beta_true, kind="stable"), args.tiers):
-        beta_true[g] = beta_true[g].mean()
+        beta_true[g] = beta_true[g].mean() + args.tier_spread * (beta_true[g] - beta_true[g].mean())
 world = World(pairs, n, beta_true, tie)
 theta, M = world.rating, world.M
 r_true = point_rank(theta)
@@ -145,9 +149,9 @@ n_ordered = truly_above.sum()
 z_bonf = norm.ppf(1 - LEVEL / (2 * M))
 Z_GRID = np.unique(np.r_[np.round(np.arange(1.80, 4.001, 0.05), 2), norm.ppf(1 - LEVEL / 2), z_bonf])
 tag = (("" if args.tie_rate is None else f"_tie{args.tie_rate:g}") + ("" if args.beta_scale == 1 else f"_scale{args.beta_scale:g}")
-       + (f"_tiers{args.tiers}" if args.tiers else ""))
+       + (f"_tiers{args.tiers}" if args.tiers else "") + (f"s{args.tier_spread:g}" if args.tiers and args.tier_spread else ""))
 print(f"world: M={M} models, {n.sum():,} battles/replicate, tie rate {tie:.3f}, strengths x {args.beta_scale:g}"
-      f"{f', {args.tiers} tiers' if args.tiers else ''} ({M * (M - 1) // 2 - n_ordered:,} tied pairs); "
+      f"{f', {args.tiers} tiers (spread x {args.tier_spread:g})' if args.tiers else ''} ({M * (M - 1) // 2 - n_ordered:,} tied pairs); "
       f"procedures {procs}; Bonferroni z = {z_bonf:.3f}")
 
 # ---------------------------------------------------------------- replicates
@@ -276,7 +280,7 @@ print(sw[shown].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
 # ---------------------------------------------------------------- real data
 # The real fit does not depend on the simulated world, so it is written only for the default world.
 if tag:
-    print(f"\nreal data: skipped (non-default world {tag}); run without --tie-rate / --beta-scale for it")
+    print(f"\nreal data: skipped (non-default world {tag}); run without --tie-rate / --beta-scale / --tiers for it")
     raise SystemExit(0)
 res = pd.DataFrame({"model": names, "rating": real.ratings.values, "se": np.sqrt(real.variances.values),
                     "battles": world.battles_per_model()})
