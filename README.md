@@ -49,17 +49,21 @@ Each score interval is valid on its own, but they almost never all hold at once.
 
 ## Q2: multiplicity-corrected procedures (in progress)
 
-The same 1,000 simulated datasets as Q1, with each correction applied side by side. Write-ups: [`notebook/q2_bonferroni.ipynb`](notebook/q2_bonferroni.ipynb) and [`notebook/q2_chi2.ipynb`](notebook/q2_chi2.ipynb). Pairwise tests with Holm/BH are not done yet.
+The same 1,000 simulated datasets as Q1, with each correction applied side by side. Write-ups: [`notebook/q2_bonferroni.ipynb`](notebook/q2_bonferroni.ipynb), [`notebook/q2_chi2.ipynb`](notebook/q2_chi2.ipynb) and [`notebook/q2_holm.ipynb`](notebook/q2_holm.ipynb). Pairwise tests with BH are not done yet.
 
-| | Arena | Bonferroni | χ² Scheffé | χ² projection |
-|---|---|---|---|---|
-| Multiplier | 1.96 | 3.55 | 12.47 | 12.47 |
-| All rank spreads right at once | 0.909 | 1.000 | 1.000 | 1.000 |
-| Mean rank spread width (ranks) | 8.0 | 13.6 | 33.1 | 43.4 |
-| True orderings declared | 0.945 | 0.901 | 0.749 | 0.669 |
-| Top model's rank spread, real 2024 board | 1–1 | 1–2 | 1–4 | 1–10 |
+| | Arena | Bonferroni | χ² Scheffé | χ² projection | Pairwise Bonferroni | Holm |
+|---|---|---|---|---|---|---|
+| Bar for "A above B" | gap > 1.96 (SE_A + SE_B) | gap > 3.55 (SE_A + SE_B) | \|z\| > 12.47 | gap > 12.47 (SE_A + SE_B) | \|z\| > 4.52 | \|z\| > 4.52, falling to 3.96 |
+| All rank spreads right at once | 0.909 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Mean rank spread width (ranks) | 8.0 | 13.6 | 33.1 | 43.4 | 12.7 | 11.3 |
+| True orderings declared | 0.945 | 0.901 | 0.749 | 0.669 | 0.908 | 0.920 |
+| Top model's rank spread, real 2024 board | 1–1 | 1–2 | 1–4 | 1–10 | 1–1 | 1–1 |
 
-All three corrections reach the 95% target, but they overshoot. In the multiplier sweep, z ≈ 2.1 already makes all rank spreads right 95% of the time with 6% more width, because Arena's overlap rule supplies most of the protection. Bonferroni widens the rank spreads by 71%. The χ² simultaneous set of Chiang et al. (2024) protects the whole 129-dimensional score vector, which is far more than a ranking needs. Projected onto each model, it gives rank spreads 3.2 times as wide as Bonferroni's. Reading the same set through pairwise differences (Scheffé), which uses the covariances, reduces this to 2.4 times. The z ≈ 2.1 benchmark uses the true ranks, so it is not a procedure that can be applied to real data. Same idealized simulation as Q1.
+Here z is a pair's score gap divided by the standard error of that gap, which uses the full covariance.
+
+All the corrections reach the 95% target, but they overshoot. In the multiplier sweep, z ≈ 2.1 already makes all rank spreads right 95% of the time with 6% more width, because Arena's overlap rule supplies most of the protection. Bonferroni widens the rank spreads by 71%. The χ² simultaneous set of Chiang et al. (2024) protects the whole 129-dimensional score vector, which is far more than a ranking needs. Projected onto each model, it gives rank spreads 3.2 times as wide as Bonferroni's. Reading the same set through pairwise differences (Scheffé), which uses the covariances, reduces this to 2.4 times. The z ≈ 2.1 benchmark uses the true ranks, so it is not a procedure that can be applied to real data. Same idealized simulation as Q1.
+
+Testing each of the 8,256 pairs directly, with Holm's step-down correction, gives the narrowest valid rank spreads so far: 18% narrower than Bonferroni's. Testing each gap directly instead of checking whether intervals overlap saves 0.9 ranks. Holm's step-down saves 1.5 more, because thousands of clearly different pairs lower the bar for the rest. The textbook (two-sided) Holm is not proven to control wrong directions under correlation. A one-sided version that is proven narrows the spreads only to 12.4. Stress-test worlds with exact ties among the models are where these guarantees are tight. There Holm still gets all rank spreads right in at least 96.6% of datasets, while Arena falls to 7–24%. On the real board, Holm cannot support 223 of the 7,808 orderings Arena declares, and it cannot separate any pair Arena calls tied.
 
 ## Data and code
 
@@ -77,7 +81,9 @@ python test_simulate.py      # simulator sanity checks
 python q1.py --reps 1000     # Q1: coverage of Arena's rank spread (semi-synthetic)
 python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
 python q1_figures.py         # figures for docs/q1.md
-python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe   # Q2: corrected procedures
+python test_pairwise.py      # Q2 pairwise procedures: checks against statsmodels
+python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm   # Q2
+python q2.py --reps 1000 --tiers 20 --procedures ...   # Q2 stress tests: also --tiers 10, --beta-scale 0.5 / 0.25 / 0.1 / 0
 pip install jupyter && jupyter nbconvert --to notebook --execute --inplace notebook/q2_*.ipynb   # Q2 write-ups
 ```
 
@@ -87,4 +93,6 @@ Results go to `results/`.
 
 - Chiang et al. (2024). *Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference.* ICML. [arXiv:2403.04132](https://arxiv.org/abs/2403.04132)
 - LMArena (2025). [Arena's Ranking Method](https://arena.ai/blog/ranking-method)
+- Holm (1979). A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics.*
+- Shaffer (1980). Control of directional errors with stagewise multiple test procedures. *Annals of Statistics.*
 - Donoho & Jin (2004). Higher criticism for detecting sparse heterogeneous mixtures. *Annals of Statistics.*
