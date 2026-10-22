@@ -9,14 +9,26 @@ Procedures: run side by side on every simulated dataset. Each maps one fit to a 
   bonferroni  z_{1 - alpha/(2M)} in place of z_{1 - alpha/2}
   chi2        Chiang et al.'s chi^2 simultaneous set projected onto each model: z = sqrt(chi^2_{M-1, 1-alpha})
   chi2_scheffe  the same set, i above j when beta_i > beta_j on the whole set (uses the full covariance)
-  holm, bh: stubs below, to be filled in; then pass them with --procedures
+  pairwise_bonferroni  test H0: beta_i = beta_j for each of the K = M(M-1)/2 pairs with z_ij = diff / SE(diff) from the
+                full covariance, each at alpha / K (pairwise.py has all three pairwise procedures and their guarantees)
+  holm          the same tests with Holm's step-down (the textbook two-sided version)
+  holm_onesided Holm on the M(M-1) one-sided hypotheses "i is not above j": provably controls false orderings
+  bh: stub below, to be filled in; then pass it with --procedures
 Sweep:      rank spreads from beta_hat +- z SE over a grid of z, to find the smallest z at which simultaneous coverage
             reaches 95%. This is an oracle benchmark (it needs the truth), not a procedure: it measures how much of
             Bonferroni's widening the rank spreads actually need.
-Real data:  every procedure applied to the real fit, next to Arena's rank spreads.
+Real data:  every procedure applied to the real fit, next to Arena's rank spreads (default world only).
+Stress tests (same graph and battle counts, only the true strengths change):
+            --beta-scale s multiplies the strengths by s, so s < 1 packs the models closer together (s = 0: all tied).
+            --tiers T sorts the models into T equal-size tiers by true strength and gives every model its tier's mean
+            strength, so models in a tier are exactly tied. Exact ties are where FWER bounds are tight: any ordering
+            declared inside a tier is false. The true rank of tied models is their shared best rank (1 + #strictly
+            above), and a rank interval still holds whenever no false ordering is declared.
 
-    python q2.py --reps 1000 [--procedures arena,bonferroni] [--tie-rate 0] [--seed 0]
-Writes results/q2{tag}_summary.csv, q2{tag}_per_model.csv, q2{tag}_sweep.csv, q2{tag}.npz, q2_real.csv.
+    python q2.py --reps 1000 [--procedures arena,bonferroni] [--tie-rate 0] [--beta-scale 1] [--tiers T] [--seed 0]
+Writes results/q2{tag}_summary.csv, q2{tag}_per_model.csv, q2{tag}_sweep.csv, q2{tag}.npz, and, for the default world,
+q2_real.csv (per model), q2_real_pairs.csv (per pair: z and each procedure's verdict) and q2_real_cov.npz (the real fit's
+ratings and full covariance). tag = "" for the default world, else _tie{t}, _scale{s} and/or _tiers{T}.
 """
 import argparse
 import os
@@ -27,6 +39,7 @@ from scipy.stats import norm, chi2
 from arena_rank.utils.data_utils import PairDataset
 from arena_data import load_battles, load_official
 from ranking import fit_arena, rank_spread, point_rank
+from pairwise import pairwise_test, pairwise_z, is_transitive
 from simulate import World, pair_counts
 
 LEVEL = 0.05
@@ -77,14 +90,20 @@ def chi2_scheffe(est, V):
 
 
 def pairwise(est, V, correction):
-    """Tests of H0: beta_i = beta_j for every pair, with Var(beta_i - beta_j) from V and errors controlled by Holm (FWER)
-    or BH (FDR). TODO (Q2): return {"above": H0 rejected and beta_hat_i > beta_hat_j}."""
-    raise NotImplementedError
+    """Tests of H0: beta_i = beta_j for every pair, with z_ij = (beta_hat_i - beta_hat_j) / SE(beta_hat_i - beta_hat_j)
+    and Var(beta_hat_i - beta_hat_j) = V_ii + V_jj - 2 V_ij; i above j when H0 is rejected and beta_hat_i > beta_hat_j.
+    "z_cut" is the |z| bar in force where the procedure stopped. No score intervals, so no score-coverage rows.
+    correction: "pairwise_bonferroni", "holm" or "holm_onesided" (see pairwise.py), or "bh" (FDR; TODO, Q2)."""
+    if correction == "bh":
+        raise NotImplementedError("BH: TODO (Q2). pairwise.pairwise_z gives the z_ij; p = 2 * norm.sf(|z|)")
+    above, z_cut = pairwise_test(est.ratings.values, V, correction, LEVEL)
+    return {"above": above, "z_cut": z_cut}
 
 
+PAIRWISE = ["pairwise_bonferroni", "holm", "holm_onesided", "bh"]
 PROCEDURES = {"arena": arena, "bonferroni": bonferroni, "chi2": chi2_set, "chi2_scheffe": chi2_scheffe,
-              "holm": lambda est, V: pairwise(est, V, "holm"), "bh": lambda est, V: pairwise(est, V, "bh")}
-NEEDS_COV = {"chi2", "chi2_scheffe", "holm", "bh"}
+              **{p: (lambda est, V, p=p: pairwise(est, V, p)) for p in PAIRWISE}}
+NEEDS_COV = {"chi2", "chi2_scheffe", *PAIRWISE}
 
 
 def ranks_from_orderings(above):
@@ -96,6 +115,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--reps", type=int, default=1000)
 ap.add_argument("--procedures", default="arena,bonferroni", help=f"comma-separated, from {list(PROCEDURES)}")
 ap.add_argument("--tie-rate", type=float, default=None, help="default: observed tie share; 0 = binary outcomes")
+ap.add_argument("--beta-scale", type=float, default=1.0, help="multiply the true strengths by this (stress test)")
+ap.add_argument("--tiers", type=int, default=0, help="replace the strengths by T tiers of tied models (stress test)")
 ap.add_argument("--seed", type=int, default=0)
 args = ap.parse_args()
 procs = args.procedures.split(",")
@@ -112,20 +133,28 @@ real, real_V = fit if full_cov else (fit, None)
 names = np.array(real_ds.competitors)
 tie = battles.winner.str.startswith("tie").mean() if args.tie_rate is None else args.tie_rate
 pairs, n = pair_counts(battles, names)
-world = World(pairs, n, real.beta.values, tie)
+beta_true = args.beta_scale * real.beta.values
+if args.tiers:
+    for g in np.array_split(np.argsort(-beta_true, kind="stable"), args.tiers):
+        beta_true[g] = beta_true[g].mean()
+world = World(pairs, n, beta_true, tie)
 theta, M = world.rating, world.M
 r_true = point_rank(theta)
 truly_above = theta[:, None] > theta[None, :]
 n_ordered = truly_above.sum()
 z_bonf = norm.ppf(1 - LEVEL / (2 * M))
 Z_GRID = np.unique(np.r_[np.round(np.arange(1.80, 4.001, 0.05), 2), norm.ppf(1 - LEVEL / 2), z_bonf])
-print(f"world: M={M} models, {n.sum():,} battles/replicate, tie rate {tie:.3f}; procedures {procs}; "
-      f"Bonferroni z = {z_bonf:.3f}")
+tag = (("" if args.tie_rate is None else f"_tie{args.tie_rate:g}") + ("" if args.beta_scale == 1 else f"_scale{args.beta_scale:g}")
+       + (f"_tiers{args.tiers}" if args.tiers else ""))
+print(f"world: M={M} models, {n.sum():,} battles/replicate, tie rate {tie:.3f}, strengths x {args.beta_scale:g}"
+      f"{f', {args.tiers} tiers' if args.tiers else ''} ({M * (M - 1) // 2 - n_ordered:,} tied pairs); "
+      f"procedures {procs}; Bonferroni z = {z_bonf:.3f}")
 
 # ---------------------------------------------------------------- replicates
 R = args.reps
 store = {p: {"ci_cover": np.full((R, M), np.nan), "rs_cover": np.zeros((R, M), bool),
-             "best": np.zeros((R, M), np.int16), "worst": np.zeros((R, M), np.int16)} for p in procs}
+             "best": np.zeros((R, M), np.int16), "worst": np.zeros((R, M), np.int16), "z_cut": np.full(R, np.nan)}
+         for p in procs}
 orders = {p: [] for p in procs}
 est_rating, est_se = np.zeros((R, M)), np.zeros((R, M))
 sweep = np.zeros((R, len(Z_GRID), 6))   # all CIs cover, all spreads cover, spread coverage, width, power, any false
@@ -135,10 +164,14 @@ for r in range(R):
     est, V = fit if full_cov else (fit, None)
     for p in procs:
         out = PROCEDURES[p](est, V)
+        # every procedure here declares a strict partial order (see pairwise.py for why), so ranks are well defined
+        assert not (out["above"] & out["above"].T).any() and is_transitive(out["above"]), p
         best, worst = ranks_from_orderings(out["above"])
         s = store[p]
         if "L" in out:
             s["ci_cover"][r] = (out["L"] <= theta) & (theta <= out["U"])
+        if "z_cut" in out:
+            s["z_cut"][r] = out["z_cut"]
         s["rs_cover"][r] = (best <= r_true) & (r_true <= worst)
         s["best"][r], s["worst"][r] = best, worst
         row = {}
@@ -159,7 +192,6 @@ for r in range(R):
     if (r + 1) % 100 == 0:
         print(f"  {r + 1}/{R} replicates, {time.time() - t0:.0f}s", flush=True)
 
-tag = "" if args.tie_rate is None else f"_tie{args.tie_rate:g}"
 np.savez_compressed(f"results/q2{tag}.npz", names=names, theta=theta, r_true=r_true, z_grid=Z_GRID,
                     est_rating=est_rating, est_se=est_se, sweep=sweep,
                     **{f"{p}_{k}": v for p in procs for k, v in store[p].items()})
@@ -192,6 +224,8 @@ def summarize(s, od):
         "rank interval coverage, simultaneous (all models)": mc(rs.all(1)),
         "rank interval width, mean": mc(width.mean(1)),
     }
+    if not np.isnan(s["z_cut"]).any():
+        out["pairwise |z| bar where the procedure stopped"] = mc(s["z_cut"])
     for rule, label in [("orderings", "declared orderings"), ("rs", "rank intervals don't overlap")]:
         dec, false = od[f"{rule}_declared"], od[f"{rule}_false"]
         out |= {
@@ -240,17 +274,37 @@ shown = np.isclose(sw.z * 10, np.round(sw.z * 10)) | np.isclose(sw.z, z_bonf) | 
 print(sw[shown].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
 
 # ---------------------------------------------------------------- real data
+# The real fit does not depend on the simulated world, so it is written only for the default world.
+if tag:
+    print(f"\nreal data: skipped (non-default world {tag}); run without --tie-rate / --beta-scale for it")
+    raise SystemExit(0)
 res = pd.DataFrame({"model": names, "rating": real.ratings.values, "se": np.sqrt(real.variances.values),
                     "battles": world.battles_per_model()})
+iu = np.triu_indices(M, 1)
+hi = np.where(real.ratings.values[iu[0]] >= real.ratings.values[iu[1]], iu[0], iu[1])   # higher-rated model of each pair
+lo = iu[0] + iu[1] - hi
+pairs_real = pd.DataFrame({"model_hi": names[hi], "model_lo": names[lo], "rating_hi": real.ratings.values[hi],
+                           "rating_lo": real.ratings.values[lo]})
 for p in procs:
     out = PROCEDURES[p](real, real_V)
     res[f"{p}_best"], res[f"{p}_worst"] = ranks_from_orderings(out["above"])
     res[f"{p}_orderings"] = out["above"].sum(1)
+    assert not out["above"][lo, hi].any()   # no procedure ever puts the lower-rated model of a pair on top
+    pairs_real[p] = out["above"][hi, lo]    # True: "hi above lo" declared; False: the pair is left unordered
 if "arena" in procs:
     b, w = rank_spread(real.rating_lower, real.rating_upper)
     assert (res.arena_best.values == b).all() and (res.arena_worst.values == w).all()
 res = res.sort_values("rating", ascending=False)
 res.to_csv("results/q2_real.csv", index=False)
+if real_V is not None:
+    z = pairwise_z(real.ratings.values, real_V)
+    se_diff = np.sqrt(np.maximum(np.diag(real_V)[hi] + np.diag(real_V)[lo] - 2 * real_V[hi, lo], 0))
+    pairs_real.insert(4, "se_diff", se_diff)
+    pairs_real.insert(5, "z", z[hi, lo])
+    se = np.sqrt(real.variances.values)
+    pairs_real.insert(6, "se_hi_plus_se_lo", se[hi] + se[lo])   # what Arena's overlap rule divides by, in effect
+    np.savez_compressed("results/q2_real_cov.npz", names=names, ratings=real.ratings.values, V=real_V)
+pairs_real.sort_values(["rating_hi", "rating_lo"], ascending=False).to_csv("results/q2_real_pairs.csv", index=False)
 print("\nreal data: " + "; ".join(f"{p}: mean rank interval width {(res[f'{p}_worst'] - res[f'{p}_best'] + 1).mean():.1f}, "
                                   f"{res[f'{p}_orderings'].sum():,} declared orderings" for p in procs))
 print(res.head(20).round(1).to_string(index=False))

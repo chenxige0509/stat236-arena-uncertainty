@@ -2,3 +2,7 @@
 __pycache__/
 data/
 .DS_Store
+
+# Q2 stress-test worlds: raw per-replicate arrays are large; the CSVs next to them are committed
+results/q2_scale*.npz
+results/q2_tiers*.npz
