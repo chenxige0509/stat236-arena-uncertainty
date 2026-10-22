@@ -90,7 +90,8 @@ python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
 python q1_figures.py         # figures for docs/q1.md
 python test_pairwise.py      # Q2 pairwise procedures: checks against statsmodels
 python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm   # Q2
-for a in "--beta-scale 0.5" "--beta-scale 0.25" "--beta-scale 0.1" "--tiers 20" "--tiers 10" "--beta-scale 0"; do
+for a in "--beta-scale 0.5" "--beta-scale 0.25" "--beta-scale 0.1" "--tiers 20" "--tiers 10" \
+         "--tiers 20 --tier-spread 0.05" "--tiers 20 --tier-spread 0.1" "--tiers 20 --tier-spread 0.2" "--beta-scale 0"; do
   python q2.py --reps 1000 $a --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm
 done                         # Q2 stress-test worlds (about 4 min each)
 pip install jupyter && jupyter nbconvert --to notebook --execute --inplace notebook/q2_*.ipynb   # Q2 write-ups
