@@ -34,7 +34,19 @@ The two come from the same source but are not the same data. The official board 
 
 Also reported: our sandwich SE ÷ the official bootstrap SD has median 0.98, so the current arena-rank intervals (sandwich, used in Q1) and the 2024 intervals (bootstrap) have about the same width.
 
-**Limitations.** Only the 2024-08 snapshot is checked, so this says nothing direct about the current site. The dedup filter is justified by the matching counts, not by a cited line of code. The 2024 site showed only the best end of the rank spread, so the worst end cannot be checked.
+**Limitations.** The dedup filter is justified by the matching counts, not by a cited line of code. The 2024 site showed only the best end of the rank spread, so the worst end cannot be checked here; the 2026 check below covers both ends.
+
+### The current (2026) site
+
+`step0_2026.py` repeats the interval and rank checks for today's site, using the published boards in [`lmarena-ai/leaderboard-dataset`](https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset) (rating, interval, variance and vote count per model) and a record of what the site displayed for the top 59 models of the Text Overall board dated 2026-10-08 (`results/site_text_overall_20261008.csv`, read from arena.ai on 2026-10-12).
+
+| Check | Result |
+|---|---|
+| Which board the site shows | The style-controlled one: all 59 scores match `text_style_control` to rounding (max 0.50), all ± and vote counts match. The plain `text` board differs by up to 54 points |
+| Intervals are marginal | Half-width ÷ √variance is exactly 1.9600 on every 2026 Text board: 4,773 boards, 1.5M model rows, no exception. A correction would need 2.24–3.85 (Bonferroni) or 2.0–21.6 (χ²), depending on the board's size |
+| Rank spread formula | The blog's formula on the published intervals reproduces the site's rank spread for 59 of 59 models, both ends |
+
+So the current site, like the 2024 one, computes its rank spread from uncorrected per-model 95% intervals. The rank-spread code is not public, so this is the evidence for it. **Limitations.** Only the Text boards are checked, and only one site view (the top 59 of one board) was recorded; the site shows only its latest board.
 
 ## Q1: coverage of Arena's rank spread
 
@@ -104,12 +116,15 @@ The 2024 specialties are neither rare nor weak. 94 of the 129 models have at lea
 
 χ² and HC+ are best for dense effects, where min-P is far behind. For the sparsest effects χ² falls behind and plain HC is best. This is the ordering Lecture 3 predicts, but the gap is modest: with N = 958 it only shows at the sparse end of the grid. For identification, BH finds 76–93% of 27-point specialties and Bonferroni about 53%. BH's false discovery proportion stays near 10% (0.09–0.12) and Bonferroni's chance of any false discovery near 5%. Categories overlap (many coding battles are also hard prompts), so a planted specialty also raises the model in overlapping categories. Those discoveries (1–23%) are counted as spillovers, not as false.
 
+Figures (`q3_figures.py`): power of the four global tests on the whole grid (`docs/figures/q3_power.png`), Bonferroni and BH against their targets (`q3_identification.png`), the real z* against N(0, 1) (`q3_real_z.png`), and the specialty map of the 40 highest-rated models (`q3_specialties.png`).
+
 **Limitations.** The null is exact Bradley–Terry with fixed strengths, so anything else that varies with the category also shows up as a specialty, such as strengths drifting over time while the category mix changes, or voters who differ between languages. Only the 2024-08 snapshot is used, and the simulation is as idealized as in Q1.
 
 ## Data and code
 
 - `clean_battle_20240814_public.json` — the public LMSYS battle dump released with Chiang et al. (2024)'s notebook (1.8M battles, 2023-04 to 2024-08-14; [download](https://storage.googleapis.com/arena_external_data/public/clean_battle_20240814_public.json)). Battle records only: no ratings. A public version of the log behind the official board, missing some recent battles (see Step 0). Not in the repo; pass its path to `prepare_data.py`.
 - Official leaderboard snapshot `elo_results_20240813.pkl` (ratings, intervals and ranks computed by LMSYS, for the overall board and 18 category boards; our answer key in Step 0 and Q3 Step 0) from the [`lmarena-ai/chatbot-arena-leaderboard`](https://huggingface.co/spaces/lmarena-ai/chatbot-arena-leaderboard) space (downloaded automatically by Step 0; loaded with an allow-list unpickler).
+- [`lmarena-ai/leaderboard-dataset`](https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset) — every board Arena has published, with rating, interval, variance and vote count per model; the `text` and `text_style_control` subsets are used by `step0_2026.py` (downloaded automatically to `data/leaderboard_dataset/`, about 115 MB).
 - [`lmarena/arena-rank`](https://github.com/lmarena/arena-rank) — Arena's official ranking code; our "Arena method" is exactly its `BradleyTerry` fit.
 
 ## Running
@@ -118,6 +133,7 @@ The 2024 specialties are neither rare nor weak. 94 of the 129 models have at lea
 python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 python prepare_data.py --src ~/Downloads/clean_battle_20240814_public.json   # -> data/battles_20240814.parquet
 python step0.py              # Step 0: reproduce the 2024-08-12 official leaderboard
+python step0_2026.py         # Step 0 for the 2026 site: intervals and rank spread (downloads leaderboard-dataset)
 python test_simulate.py      # simulator sanity checks
 python q1.py --reps 1000     # Q1: coverage of Arena's rank spread (semi-synthetic)
 python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
@@ -132,6 +148,7 @@ pip install jupyter && jupyter nbconvert --to notebook --execute --inplace noteb
 python q3_step0.py           # Q3 Step 0: category definitions vs the official 2024 category boards
 python q3.py --reps 500      # Q3 Step 2: specialty tests on the real board (about 2 min)
 python q3_sim.py --reps 200  # Q3 Step 3: power for planted specialties (about 35 min; needs results/q3_null.npz)
+python q3_figures.py         # Q3 figures in docs/figures/
 ```
 
 Results go to `results/`.
