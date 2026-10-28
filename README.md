@@ -7,7 +7,7 @@ Chatbot Arena ranks LLMs with a Bradley–Terry model and reports a **rank sprea
 ## Research questions
 
 - **Q1 (Diagnosis):** What is the actual coverage of Arena's rank spread, i.e., how often does it contain the true rank?
-- **Q2 (Repair):** Do multiplicity-corrected procedures (Bonferroni, χ² simultaneous set, pairwise tests with Holm/BH) reach 95% coverage, and how much wider are they?
+- **Q2 (Repair):** Do multiplicity-corrected procedures (Bonferroni, χ² simultaneous set, pairwise tests with Holm) reach 95% coverage, and how much wider are they?
 - **Q3 (Category effects):** Are category "specialties" real? First test whether any exist (Higher Criticism vs. min-P and χ²), then identify which ones (Bonferroni, BH).
 
 ## Approach
@@ -47,9 +47,9 @@ Semi-synthetic simulation: the arena-rank fit on the Step 0 battles is the truth
 
 Each score interval is valid on its own, but they almost never all hold at once. The overlap rule absorbs most of those misses, so the rank spread is too conservative for a single model (99.9%) and slightly short for the whole table (91%). Rank stability depends mainly on crowding (how many models have nearly the same strength) and data per model, not on strength itself. The simulation is idealized (independent battles, exact BT, fixed strengths), so real coverage is probably lower.
 
-## Q2: multiplicity-corrected procedures (in progress)
+## Q2: multiplicity-corrected procedures
 
-The same 1,000 simulated datasets as Q1, with each correction applied side by side. Write-ups: [`notebook/q2_bonferroni.ipynb`](notebook/q2_bonferroni.ipynb), [`notebook/q2_chi2.ipynb`](notebook/q2_chi2.ipynb) and [`notebook/q2_holm.ipynb`](notebook/q2_holm.ipynb). Pairwise tests with BH are not done yet.
+The same 1,000 simulated datasets as Q1, with each correction applied side by side. Write-ups: [`notebook/q2_bonferroni.ipynb`](notebook/q2_bonferroni.ipynb), [`notebook/q2_chi2.ipynb`](notebook/q2_chi2.ipynb) and [`notebook/q2_holm.ipynb`](notebook/q2_holm.ipynb).
 
 | | Arena | Bonferroni | χ² Scheffé | χ² projection | Pairwise Bonferroni | Holm |
 |---|---|---|---|---|---|---|

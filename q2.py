@@ -13,7 +13,6 @@ Procedures: run side by side on every simulated dataset. Each maps one fit to a 
                 full covariance, each at alpha / K (pairwise.py has all three pairwise procedures and their guarantees)
   holm          the same tests with Holm's step-down (the textbook two-sided version)
   holm_onesided Holm on the M(M-1) one-sided hypotheses "i is not above j": provably controls false orderings
-  bh: stub below, to be filled in; then pass it with --procedures
 Sweep:      rank spreads from beta_hat +- z SE over a grid of z, to find the smallest z at which simultaneous coverage
             reaches 95%. This is an oracle benchmark (it needs the truth), not a procedure: it measures how much of
             Bonferroni's widening the rank spreads actually need.
@@ -96,14 +95,12 @@ def pairwise(est, V, correction):
     """Tests of H0: beta_i = beta_j for every pair, with z_ij = (beta_hat_i - beta_hat_j) / SE(beta_hat_i - beta_hat_j)
     and Var(beta_hat_i - beta_hat_j) = V_ii + V_jj - 2 V_ij; i above j when H0 is rejected and beta_hat_i > beta_hat_j.
     "z_cut" is the |z| bar in force where the procedure stopped. No score intervals, so no score-coverage rows.
-    correction: "pairwise_bonferroni", "holm" or "holm_onesided" (see pairwise.py), or "bh" (FDR; TODO, Q2)."""
-    if correction == "bh":
-        raise NotImplementedError("BH: TODO (Q2). pairwise.pairwise_z gives the z_ij; p = 2 * norm.sf(|z|)")
+    correction: "pairwise_bonferroni", "holm" or "holm_onesided" (see pairwise.py)."""
     above, z_cut = pairwise_test(est.ratings.values, V, correction, LEVEL)
     return {"above": above, "z_cut": z_cut}
 
 
-PAIRWISE = ["pairwise_bonferroni", "holm", "holm_onesided", "bh"]
+PAIRWISE = ["pairwise_bonferroni", "holm", "holm_onesided"]
 PROCEDURES = {"arena": arena, "bonferroni": bonferroni, "chi2": chi2_set, "chi2_scheffe": chi2_scheffe,
               **{p: (lambda est, V, p=p: pairwise(est, V, p)) for p in PAIRWISE}}
 NEEDS_COV = {"chi2", "chi2_scheffe", *PAIRWISE}
