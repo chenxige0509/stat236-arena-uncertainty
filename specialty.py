@@ -17,11 +17,12 @@ Tests on the N tested pairs (two-sided p-values p = 2 Phi(-|z*|)):
   global (is there any specialty?)  min-P = N * min p, chi^2 = sum z*^2, Higher Criticism (Donoho & Jin 2004)
   identification (which ones?)      Bonferroni (p < alpha / N), Benjamini-Hochberg at level q
 """
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from categories import CATEGORIES, category_mask
+from categories import CATEGORIES, MIN_BATTLES, category_mask
 
 
 # ---------------------------------------------------------------- data
@@ -88,6 +89,32 @@ def specialty_z(groups, cells, beta):
     with np.errstate(divide="ignore", invalid="ignore"):
         z = (O - E) / np.sqrt(V)
     return O, E, V, z
+
+
+def real_world():
+    """Everything Q3 builds from the real battles: the battles (renamed to board names), model names, the comparison
+    graph, the (pair, pattern) groups, the overall arena-rank fit beta_hat, the tie share, battles per (model,
+    category), and the tested pairs (mi, ci) with at least MIN_BATTLES battles."""
+    from arena_rank.utils.data_utils import PairDataset
+    from arena_data import load_battles, load_official, RENAME
+    from ranking import fit_arena
+    from simulate import pair_counts, fixed_shape_dataset
+
+    _, cutoff, _ = load_official()
+    b = load_battles(cutoff=cutoff)
+    for c in ["model_a", "model_b"]:
+        b[c] = b[c].replace(RENAME)
+    real_ds = PairDataset.from_pandas(b[["model_a", "model_b", "winner"]])
+    names = np.array(real_ds.competitors)
+    pairs, n_pair = pair_counts(b, names)
+    G = Groups(b, names, pairs)
+    fit = fit_arena(fixed_shape_dataset(pairs, G.pair_cells(G.cells)))
+    ref = fit_arena(real_ds)
+    assert np.abs(fit.ratings.values - ref.ratings.values).max() < 1e-6     # group cells reproduce the real fit
+    nb = G.battles()
+    mi, ci = np.nonzero(nb >= MIN_BATTLES)
+    return SimpleNamespace(battles=b, names=names, pairs=pairs, n_pair=n_pair, G=G, beta_hat=fit.beta.values,
+                           tie=b.winner.str.startswith("tie").mean(), nb=nb, mi=mi, ci=ci, N=len(mi))
 
 
 # ---------------------------------------------------------------- tests

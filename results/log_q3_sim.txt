@@ -1,0 +1,76 @@
+delta for mu = 1, in rating points: median 5.9 [1.2, 20.1]
+critical values from 400 fresh null draws: hc 5.01, hc_plus 3.26, max_abs_z 4.11, chi2 1.04e+03
+size on 400 more null draws (nominal 0.05, MC SE 0.011): hc 0.060, hc_plus 0.050, max_abs_z 0.052, chi2 0.083  (204s)
+[1/31] theta None r 0.0: s=0 mu=0.00 (0.0 pts), realized |z*| nan | power HC 0.06 HC+ 0.06 min-P 0.05 chi2 0.06 | Bonf TPR nan BH TPR nan FDP 0.10 spill 0.00 | 256s
+[2/31] theta 0.2 r 0.1: s=243 mu=1.17 (7.0 pts), realized |z*| 1.23 | power HC 0.97 HC+ 1.00 min-P 0.35 chi2 1.00 | Bonf TPR 0.00 BH TPR 0.01 FDP 0.01 spill 0.09 | 309s
+[3/31] theta 0.2 r 0.2: s=243 mu=1.66 (9.8 pts), realized |z*| 1.59 | power HC 1.00 HC+ 1.00 min-P 0.83 chi2 1.00 | Bonf TPR 0.01 BH TPR 0.07 FDP 0.01 spill 0.11 | 361s
+[4/31] theta 0.2 r 0.4: s=243 mu=2.34 (13.9 pts), realized |z*| 2.16 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.04 BH TPR 0.35 FDP 0.01 spill 0.13 | 412s
+[5/31] theta 0.2 r 0.8: s=243 mu=3.31 (19.7 pts), realized |z*| 3.02 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.19 BH TPR 0.74 FDP 0.01 spill 0.17 | 465s
+[6/31] theta 0.2 r 1.5: s=243 mu=4.54 (26.9 pts), realized |z*| 4.12 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.53 BH TPR 0.93 FDP 0.02 spill 0.23 | 518s
+[7/31] theta 0.3 r 0.1: s=122 mu=1.17 (7.0 pts), realized |z*| 1.22 | power HC 0.49 HC+ 0.90 min-P 0.15 chi2 0.97 | Bonf TPR 0.00 BH TPR 0.00 FDP 0.06 spill 0.04 | 572s
+[8/31] theta 0.3 r 0.2: s=122 mu=1.66 (9.8 pts), realized |z*| 1.58 | power HC 0.99 HC+ 1.00 min-P 0.57 chi2 1.00 | Bonf TPR 0.01 BH TPR 0.03 FDP 0.05 spill 0.09 | 626s
+[9/31] theta 0.3 r 0.4: s=122 mu=2.34 (13.9 pts), realized |z*| 2.15 | power HC 1.00 HC+ 1.00 min-P 0.96 chi2 1.00 | Bonf TPR 0.03 BH TPR 0.23 FDP 0.04 spill 0.10 | 681s
+[10/31] theta 0.3 r 0.8: s=122 mu=3.31 (19.7 pts), realized |z*| 3.02 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.18 BH TPR 0.66 FDP 0.04 spill 0.13 | 737s
+[11/31] theta 0.3 r 1.5: s=122 mu=4.54 (26.9 pts), realized |z*| 4.13 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.53 BH TPR 0.92 FDP 0.04 spill 0.19 | 794s
+[12/31] theta 0.4 r 0.1: s=61 mu=1.17 (7.0 pts), realized |z*| 1.21 | power HC 0.21 HC+ 0.42 min-P 0.15 chi2 0.49 | Bonf TPR 0.00 BH TPR 0.00 FDP 0.05 spill 0.04 | 853s
+[13/31] theta 0.4 r 0.2: s=61 mu=1.66 (9.8 pts), realized |z*| 1.57 | power HC 0.66 HC+ 0.91 min-P 0.36 chi2 0.94 | Bonf TPR 0.01 BH TPR 0.02 FDP 0.06 spill 0.06 | 909s
+[14/31] theta 0.4 r 0.4: s=61 mu=2.34 (13.9 pts), realized |z*| 2.16 | power HC 1.00 HC+ 1.00 min-P 0.83 chi2 1.00 | Bonf TPR 0.03 BH TPR 0.14 FDP 0.07 spill 0.07 | 966s
+[15/31] theta 0.4 r 0.8: s=61 mu=3.31 (19.7 pts), realized |z*| 3.01 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.16 BH TPR 0.56 FDP 0.07 spill 0.09 | 1020s
+[16/31] theta 0.4 r 1.5: s=61 mu=4.54 (26.9 pts), realized |z*| 4.13 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.53 BH TPR 0.91 FDP 0.07 spill 0.14 | 1074s
+[17/31] theta 0.5 r 0.1: s=31 mu=1.17 (7.0 pts), realized |z*| 1.23 | power HC 0.10 HC+ 0.23 min-P 0.07 chi2 0.31 | Bonf TPR 0.00 BH TPR 0.00 FDP 0.08 spill 0.03 | 1129s
+[18/31] theta 0.5 r 0.2: s=31 mu=1.66 (9.8 pts), realized |z*| 1.56 | power HC 0.28 HC+ 0.48 min-P 0.18 chi2 0.49 | Bonf TPR 0.01 BH TPR 0.01 FDP 0.10 spill 0.02 | 1183s
+[19/31] theta 0.5 r 0.4: s=31 mu=2.34 (13.9 pts), realized |z*| 2.15 | power HC 0.88 HC+ 0.94 min-P 0.56 chi2 0.95 | Bonf TPR 0.03 BH TPR 0.09 FDP 0.07 spill 0.04 | 1237s
+[20/31] theta 0.5 r 0.8: s=31 mu=3.31 (19.7 pts), realized |z*| 3.01 | power HC 1.00 HC+ 1.00 min-P 0.99 chi2 1.00 | Bonf TPR 0.16 BH TPR 0.45 FDP 0.09 spill 0.06 | 1292s
+[21/31] theta 0.5 r 1.5: s=31 mu=4.54 (26.9 pts), realized |z*| 4.11 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.52 BH TPR 0.87 FDP 0.09 spill 0.09 | 1346s
+[22/31] theta 0.6 r 0.1: s=16 mu=1.17 (7.0 pts), realized |z*| 1.20 | power HC 0.07 HC+ 0.10 min-P 0.08 chi2 0.14 | Bonf TPR 0.00 BH TPR 0.00 FDP 0.07 spill 0.02 | 1400s
+[23/31] theta 0.6 r 0.2: s=16 mu=1.66 (9.8 pts), realized |z*| 1.57 | power HC 0.19 HC+ 0.27 min-P 0.14 chi2 0.32 | Bonf TPR 0.01 BH TPR 0.01 FDP 0.11 spill 0.02 | 1454s
+[24/31] theta 0.6 r 0.4: s=16 mu=2.34 (13.9 pts), realized |z*| 2.15 | power HC 0.55 HC+ 0.64 min-P 0.42 chi2 0.58 | Bonf TPR 0.04 BH TPR 0.08 FDP 0.10 spill 0.03 | 1510s
+[25/31] theta 0.6 r 0.8: s=16 mu=3.31 (19.7 pts), realized |z*| 3.02 | power HC 0.99 HC+ 0.99 min-P 0.91 chi2 0.96 | Bonf TPR 0.16 BH TPR 0.38 FDP 0.09 spill 0.03 | 1568s
+[26/31] theta 0.6 r 1.5: s=16 mu=4.54 (26.9 pts), realized |z*| 4.15 | power HC 1.00 HC+ 1.00 min-P 1.00 chi2 1.00 | Bonf TPR 0.54 BH TPR 0.83 FDP 0.10 spill 0.06 | 1627s
+[27/31] theta 0.7 r 0.1: s=8 mu=1.17 (7.0 pts), realized |z*| 1.20 | power HC 0.06 HC+ 0.10 min-P 0.03 chi2 0.10 | Bonf TPR 0.00 BH TPR 0.00 FDP 0.09 spill 0.01 | 1685s
+[28/31] theta 0.7 r 0.2: s=8 mu=1.66 (9.8 pts), realized |z*| 1.57 | power HC 0.10 HC+ 0.13 min-P 0.08 chi2 0.17 | Bonf TPR 0.01 BH TPR 0.01 FDP 0.11 spill 0.02 | 1741s
+[29/31] theta 0.7 r 0.4: s=8 mu=2.34 (13.9 pts), realized |z*| 2.14 | power HC 0.29 HC+ 0.26 min-P 0.26 chi2 0.28 | Bonf TPR 0.03 BH TPR 0.05 FDP 0.12 spill 0.01 | 1799s
+[30/31] theta 0.7 r 0.8: s=8 mu=3.31 (19.7 pts), realized |z*| 3.06 | power HC 0.84 HC+ 0.72 min-P 0.74 chi2 0.62 | Bonf TPR 0.16 BH TPR 0.32 FDP 0.12 spill 0.03 | 1857s
+[31/31] theta 0.7 r 1.5: s=8 mu=4.54 (26.9 pts), realized |z*| 4.13 | power HC 1.00 HC+ 0.98 min-P 0.99 chi2 0.94 | Bonf TPR 0.54 BH TPR 0.76 FDP 0.09 spill 0.03 | 1915s
+
+power of the global tests (rows: theta = rarity, columns: r = strength):
+
+hc
+r       0.1   0.2   0.4   0.8  1.5
+theta                             
+0.2    0.98  1.00  1.00  1.00  1.0
+0.3    0.50  1.00  1.00  1.00  1.0
+0.4    0.22  0.66  1.00  1.00  1.0
+0.5    0.10  0.28  0.88  1.00  1.0
+0.6    0.08  0.19  0.55  0.99  1.0
+0.7    0.06  0.10  0.30  0.84  1.0
+
+hc_plus
+r       0.1   0.2   0.4   0.8   1.5
+theta                              
+0.2    1.00  1.00  1.00  1.00  1.00
+0.3    0.90  1.00  1.00  1.00  1.00
+0.4    0.42  0.91  1.00  1.00  1.00
+0.5    0.23  0.48  0.94  1.00  1.00
+0.6    0.10  0.27  0.64  0.99  1.00
+0.7    0.10  0.13  0.26  0.72  0.98
+
+max_abs_z
+r       0.1   0.2   0.4   0.8  1.5
+theta                             
+0.2    0.35  0.84  1.00  1.00  1.0
+0.3    0.16  0.57  0.96  1.00  1.0
+0.4    0.16  0.36  0.84  1.00  1.0
+0.5    0.07  0.18  0.56  1.00  1.0
+0.6    0.08  0.14  0.42  0.90  1.0
+0.7    0.02  0.08  0.26  0.74  1.0
+
+chi2
+r       0.1   0.2   0.4   0.8   1.5
+theta                              
+0.2    1.00  1.00  1.00  1.00  1.00
+0.3    0.97  1.00  1.00  1.00  1.00
+0.4    0.49  0.94  1.00  1.00  1.00
+0.5    0.31  0.50  0.96  1.00  1.00
+0.6    0.14  0.32  0.58  0.96  1.00
+0.7    0.10  0.16  0.28  0.62  0.94

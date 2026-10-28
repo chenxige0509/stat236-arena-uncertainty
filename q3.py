@@ -42,11 +42,11 @@ import time
 import numpy as np
 import pandas as pd
 from arena_rank.utils.data_utils import PairDataset
-from arena_data import load_battles, load_official, ANCHOR, ANCHOR_RATING, RENAME
+from arena_data import ANCHOR, ANCHOR_RATING
 from categories import CATEGORIES, MIN_BATTLES, category_mask
 from ranking import fit_arena
-from simulate import World, pair_counts, fixed_shape_dataset
-from specialty import Groups, specialty_z, two_sided_p, global_stats, bonferroni, benjamini_hochberg
+from simulate import World, fixed_shape_dataset
+from specialty import real_world, specialty_z, two_sided_p, global_stats, bonferroni, benjamini_hochberg
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--reps", type=int, default=500, help="null replicates for the calibration")
@@ -56,26 +56,11 @@ os.makedirs("results", exist_ok=True)
 rng = np.random.default_rng(args.seed)
 
 # ---------------------------------------------------------------- real data
-_, cutoff, _ = load_official()
-b = load_battles(cutoff=cutoff)
-for c in ["model_a", "model_b"]:
-    b[c] = b[c].replace(RENAME)
-real_ds = PairDataset.from_pandas(b[["model_a", "model_b", "winner"]])
-names = np.array(real_ds.competitors)
-pairs, n_pair = pair_counts(b, names)
-G = Groups(b, names, pairs)
-
-fit = fit_arena(fixed_shape_dataset(pairs, G.pair_cells(G.cells)))
-ref = fit_arena(real_ds)
-assert np.abs(fit.ratings.values - ref.ratings.values).max() < 1e-6       # group cells reproduce the real fit
-beta_hat = fit.beta.values
-
-O, E, V, z = specialty_z(G, G.cells, beta_hat)
-nb = G.battles()
+W = real_world()
+b, names, pairs, n_pair, G, beta_hat, tie = W.battles, W.names, W.pairs, W.n_pair, W.G, W.beta_hat, W.tie
+nb, mi, ci, N = W.nb, W.mi, W.ci, W.N
 tested = nb >= MIN_BATTLES
-mi, ci = np.nonzero(tested)                                                # tested (model, category) pairs
-N = len(mi)
-tie = b.winner.str.startswith("tie").mean()
+O, E, V, z = specialty_z(G, G.cells, beta_hat)
 print(f"{len(b):,} battles, {len(names)} models, {len(CATEGORIES)} categories, {len(G.n):,} (pair, pattern) groups")
 print(f"tested pairs (>= {MIN_BATTLES} battles): {N} of {tested.size}; per category: "
       + ", ".join(f"{c} {int(tested[:, k].sum())}" for k, c in enumerate(CATEGORIES)))
