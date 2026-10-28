@@ -72,10 +72,44 @@ Nine stress-test worlds with the same battles and different true strengths put t
 
 On the real battles, Holm does not support 223 of the 7,808 orderings that Arena's method declares. It separates no pair that Arena shows as tied, whether a tie means overlapping score intervals or overlapping rank spreads. All guarantees are asymptotic (normal approximation).
 
+## Q3: are category specialties real?
+
+The 2024 snapshot also holds the official category boards. Q3 asks whether a model's rating in a category (say 3rd in Coding but 7th overall) differs from its overall rating by more than chance. With 129 models and 8 categories there are about 1,000 such comparisons, so about 50 would look significant at p < 0.05 even if no model had any specialty.
+
+**Categories (Step 0).** `categories.py` defines coding, math, instruction following, hard prompts, Chinese, Russian, multi-turn and long query from the dump's prompt tags. `q3_step0.py` checks each definition against the official board of the same name: 97–100 of 128 models are within ±10 battles, as for the overall board, and the category-minus-overall rating has correlation ≥ 0.999 with the official one for the pairs we test. Below 200 battles, a few old models disagree by up to 408 points. The official values look like a fit that did not converge (three Russian models share the identical rating 1137.95, although they scored only 19–31% of their battles). Q3 only tests pairs with at least 200 battles in the category: 958 of 1,032.
+
+**Statistic (Step 2).** For model m in category c, z compares m's score in c (win 1, tie 0.5) with what its overall Bradley–Terry strength predicts, divided by the standard deviation. The overall strength is fit on all battles, including those in c, so z is shrunk towards 0 and correlated across pairs. `q3.py` therefore simulates the null "no specialties" 500 times (real battles, outcomes redrawn from the overall fit, refit each time), standardizes each z against its null mean and SD, and takes the p-values of the global statistics from their null distributions. Under the null the raw z have SD 0.70–1.05, not 1.
+
+| Step 1: is there any specialty? | Observed | Null 95% point | p |
+|---|---|---|---|
+| HC+ | 330 | 3.1 | < 0.002 |
+| χ² | 21,210 | 1,028 | < 0.002 |
+| min-P (max \|z\|) | 40 | 4.0 | < 0.002 |
+
+| Step 2: which ones? | Specialties found (of 958) |
+|---|---|
+| Bonferroni (5%) | 275 |
+| BH (10%) | 525 |
+| Naive p < 0.05 | 521 (about 48 expected by chance) |
+
+The 2024 specialties are neither rare nor weak. 94 of the 129 models have at least one Bonferroni specialty, in every category, with median size 25 points (category rating minus overall rating, centered within the category). The largest are language effects: `llama-3-70b-instruct` is 73 points weaker in Chinese (z = −40), and Qwen models are about 60 points stronger. Plain HC is about 10^62 because the smallest p-value underflows to 0; HC+, which only uses p > 1/N, is the usable version.
+
+**Power (Step 3).** `q3_sim.py` plants s specialties of size μ (in z units) into the same simulated Arena, following the Rare/Weak model of Lecture 3: s = N^(1−ϑ), μ = √(2r log N), N = 958. Critical values come from fresh null draws; size is HC 0.06, HC+ 0.05, min-P 0.05, χ² 0.08.
+
+| Power | HC | HC+ | min-P | χ² |
+|---|---|---|---|---|
+| Dense: ϑ = 0.3 (122 specialties), r = 0.2 (≈ 10 points) | 1.00 | 1.00 | 0.57 | 1.00 |
+| Middle: ϑ = 0.5 (31), r = 0.4 (≈ 14 points) | 0.88 | 0.94 | 0.56 | 0.95 |
+| Sparse: ϑ = 0.7 (8), r = 0.8 (≈ 20 points) | 0.84 | 0.72 | 0.74 | 0.62 |
+
+χ² and HC+ are best for dense effects, where min-P is far behind. For the sparsest effects χ² falls behind and plain HC is best. This is the ordering Lecture 3 predicts, but the gap is modest: with N = 958 it only shows at the sparse end of the grid. For identification, BH finds 76–93% of 27-point specialties and Bonferroni about 53%. BH's false discovery proportion stays near 10% (0.09–0.12) and Bonferroni's chance of any false discovery near 5%. Categories overlap (many coding battles are also hard prompts), so a planted specialty also raises the model in overlapping categories. Those discoveries (1–23%) are counted as spillovers, not as false.
+
+**Limitations.** The null is exact Bradley–Terry with fixed strengths, so anything else that varies with the category also shows up as a specialty, such as strengths drifting over time while the category mix changes, or voters who differ between languages. Only the 2024-08 snapshot is used, and the simulation is as idealized as in Q1.
+
 ## Data and code
 
 - `clean_battle_20240814_public.json` — the public LMSYS battle dump released with Chiang et al. (2024)'s notebook (1.8M battles, 2023-04 to 2024-08-14; [download](https://storage.googleapis.com/arena_external_data/public/clean_battle_20240814_public.json)). Battle records only: no ratings. A public version of the log behind the official board, missing some recent battles (see Step 0). Not in the repo; pass its path to `prepare_data.py`.
-- Official leaderboard snapshot `elo_results_20240813.pkl` (ratings, intervals and ranks computed by LMSYS; our answer key in Step 0) from the [`lmarena-ai/chatbot-arena-leaderboard`](https://huggingface.co/spaces/lmarena-ai/chatbot-arena-leaderboard) space (downloaded automatically by Step 0; loaded with an allow-list unpickler).
+- Official leaderboard snapshot `elo_results_20240813.pkl` (ratings, intervals and ranks computed by LMSYS, for the overall board and 18 category boards; our answer key in Step 0 and Q3 Step 0) from the [`lmarena-ai/chatbot-arena-leaderboard`](https://huggingface.co/spaces/lmarena-ai/chatbot-arena-leaderboard) space (downloaded automatically by Step 0; loaded with an allow-list unpickler).
 - [`lmarena/arena-rank`](https://github.com/lmarena/arena-rank) — Arena's official ranking code; our "Arena method" is exactly its `BradleyTerry` fit.
 
 ## Running
@@ -95,6 +129,9 @@ for a in "--beta-scale 0.5" "--beta-scale 0.25" "--beta-scale 0.1" "--tiers 20" 
   python q2.py --reps 1000 $a --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm
 done                         # Q2 stress-test worlds (about 4 min each)
 pip install jupyter && jupyter nbconvert --to notebook --execute --inplace notebook/q2_*.ipynb   # Q2 write-ups
+python q3_step0.py           # Q3 Step 0: category definitions vs the official 2024 category boards
+python q3.py --reps 500      # Q3 Step 2: specialty tests on the real board (about 2 min)
+python q3_sim.py --reps 200  # Q3 Step 3: power for planted specialties (about 35 min; needs results/q3_null.npz)
 ```
 
 Results go to `results/`.
@@ -106,3 +143,4 @@ Results go to `results/`.
 - Holm (1979). A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics.*
 - Shaffer (1980). Control of directional errors with stagewise multiple test procedures. *Annals of Statistics.*
 - Donoho & Jin (2004). Higher criticism for detecting sparse heterogeneous mixtures. *Annals of Statistics.*
+- Benjamini & Hochberg (1995). Controlling the false discovery rate. *Journal of the Royal Statistical Society B.*
