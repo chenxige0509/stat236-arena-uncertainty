@@ -1,0 +1,42 @@
+1,657,517 battles, 129 models, 8 categories, 176,390 (pair, pattern) groups
+tested pairs (>= 200 battles): 958 of 1032; per category: coding 128, math 126, instruction_following 129, hard_prompts 129, chinese 115, russian 95, multi_turn 128, long_query 108
+  null 100/500, 24s
+  null 200/500, 48s
+  null 300/500, 73s
+  null 400/500, 97s
+  null 500/500, 121s
+null z: mean of means -0.001, SD median 0.919 [0.696, 1.050] (an uncalibrated z would assume 0 and 1)
+
+Step 1: is there any specialty? (p-values from the null simulation)
+statistic  observed  null_median  null_95  p_bootstrap
+    min_p         0       0.7697  0.04967     0.001996
+max_abs_z     40.25        3.352    4.047     0.001996
+     chi2 2.121e+04        954.1     1028     0.001996
+       hc 1.221e+62        1.774    4.422     0.001996
+  hc_plus     329.7        1.579    3.069     0.001996
+
+Step 2: which ones?  Bonferroni (alpha 0.05, bar p < 5.2e-05): 275;  BH (q 0.10): 525;  naive p < 0.05: 521 (about 48 by chance)
+by category (Bonferroni / BH): coding 35/68, math 40/73, instruction_following 42/75, hard_prompts 39/72, chinese 46/76, russian 32/60, multi_turn 22/48, long_query 19/53
+
+strongest specialties:
+             category                      model  battles  overall_rating  specialty_points     z        p  bonferroni   bh
+              chinese       llama-3-70b-instruct    16254        1.21e+03             -72.9 -40.3        0        True True
+              chinese        llama-3-8b-instruct    10946        1.15e+03             -59.3   -24 2.8e-127        True True
+              russian       llama-3-70b-instruct    15647        1.21e+03             -41.7   -20 7.57e-89        True True
+instruction_following                 gpt-4-0613    29716        1.16e+03              27.4    19 1.31e-80        True True
+              russian     claude-3-opus-20240229    15501        1.25e+03              38.9  18.4 2.98e-75        True True
+              chinese           llama-2-70b-chat     3752        1.09e+03             -78.7 -16.8 1.33e-63        True True
+                 math             command-r-plus    10258        1.19e+03             -36.3 -16.2 3.82e-59        True True
+                 math                  command-r     7014        1.15e+03             -42.8 -15.2 2.09e-52        True True
+              chinese mixtral-8x7b-instruct-v0.1     8614        1.11e+03             -42.7 -14.8 2.68e-49        True True
+           long_query       llama-3-70b-instruct    18181        1.21e+03             -29.4 -14.6 2.35e-48        True True
+instruction_following         gpt-3.5-turbo-0125    24345        1.11e+03              20.6  14.5 9.56e-48        True True
+               coding          deepseek-coder-v2     3283        1.18e+03              60.9  14.4 3.17e-47        True True
+              chinese           qwen1.5-32b-chat     3386        1.13e+03              67.3  14.1 3.06e-45        True True
+              russian            yi-1.5-34b-chat     3408        1.16e+03             -60.4 -14.1 3.76e-45        True True
+              russian        llama-3-8b-instruct    10486        1.15e+03             -36.5 -13.9 6.94e-44        True True
+           long_query  snowflake-arctic-instruct     2921        1.09e+03             -80.1 -13.9 1.13e-43        True True
+               coding             command-r-plus    16305        1.19e+03             -25.4 -13.8 4.62e-43        True True
+           multi_turn     claude-3-opus-20240229    23369        1.25e+03              26.7  13.4 7.31e-41        True True
+              chinese         qwen2-72b-instruct     3842        1.19e+03              63.1  13.4 1.04e-40        True True
+         hard_prompts                  command-r    15656        1.15e+03               -24   -13  1.1e-38        True True
