@@ -33,11 +33,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm, chi2
 from arena_rank.utils.data_utils import PairDataset
-from arena_data import load_battles, load_official
+from arena_data import load_battles, load_official, ANCHOR, ANCHOR_RATING, RENAME
 from ranking import fit_arena, rank_spread
 
-ANCHOR, ANCHOR_RATING = "mixtral-8x7b-instruct-v0.1", 1114.0   # the 2024 leaderboard pins this model's rating
-RENAME = {"chatgpt-4o-latest": "chatgpt-4o-latest-2024-08-08"}   # dump name -> leaderboard name
 Z = norm.ppf(0.975)
 
 os.makedirs("results", exist_ok=True)

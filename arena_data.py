@@ -7,6 +7,8 @@ import pandas as pd
 BATTLES_PATH = "data/battles_20240814.parquet"
 OFFICIAL_DATE = "20240813"   # closest published snapshot to the 20240814 battle dump
 OFFICIAL_URL = "https://huggingface.co/spaces/lmarena-ai/chatbot-arena-leaderboard/resolve/main/elo_results_{date}.pkl"
+ANCHOR, ANCHOR_RATING = "mixtral-8x7b-instruct-v0.1", 1114.0   # every 2024 board (overall and categories) pins this model
+RENAME = {"chatgpt-4o-latest": "chatgpt-4o-latest-2024-08-08"}   # dump name -> leaderboard name
 
 
 def load_battles(path=BATTLES_PATH, cutoff=None, anony_only=True, dedup=True):
