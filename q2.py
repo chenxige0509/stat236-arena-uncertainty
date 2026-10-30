@@ -204,6 +204,7 @@ if "arena" in procs and args.seed == 0 and os.path.exists(q1_path):
     k = min(R, len(q1["best"]))
     same = all((store["arena"][c][:k] == q1[c][:k]).all() for c in ["best", "worst"])
     print(f"arena rank spreads identical to the first {k} replicates in {q1_path}: {same}")
+    assert same, "q2.py no longer reproduces q1.py's draws: draw from rng only through world.draw, in the same order"
 
 
 # ---------------------------------------------------------------- summary: estimate and Monte Carlo SE

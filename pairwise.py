@@ -5,8 +5,9 @@ Var(beta_hat_i - beta_hat_j) = V_ii + V_jj - 2 V_ij from the full sandwich covar
 "i above j" when it rejects the pair and z_ij > 0. Everything is done on |z| with critical values from the normal
 quantile function, so p-values never underflow (thousands of pairs have |z| > 40).
 
-Error that matters. In the simulation every true score is distinct, so no H0: beta_i = beta_j is true and the only
-possible mistake is a wrong direction ("i above j" when beta_i < beta_j). If no ordering is wrong, every rank
+Error that matters. A false ordering is "i above j" when beta_i <= beta_j. When the true scores are distinct (the default
+world), no H0: beta_i = beta_j is true and the only possible mistake is a wrong direction; in the stress worlds with
+exactly tied models (q2.py --tiers) a declared ordering of a tied pair is also false. If no ordering is wrong, every rank
 interval holds (best_m <= true rank <= worst_m for all m), so P(any false ordering) <= alpha implies simultaneous rank
 coverage >= 1 - alpha. The procedures differ in how they guarantee that:
 
@@ -21,11 +22,11 @@ coverage >= 1 - alpha. The procedures differ in how they guarantee that:
                        worlds with many such near-ties to check it empirically.
   holm_onesided        Holm on the M(M-1) one-sided hypotheses H_ij: beta_i <= beta_j ("i is not above j"). Rejecting
                        H_ij is exactly declaring i above j, so this controls P(any false ordering) <= alpha under any
-                       dependence and with ties, by Holm's own theorem.
-
-All guarantees are asymptotic: they treat z_ij as normal with the plug-in sandwich covariance. The k-th largest |z| is compared with the
+                       dependence and with ties, by Holm's own theorem. The k-th largest |z| is compared with the
                        one-sided alpha / (2K - k + 1): it starts at the pairwise Bonferroni threshold and relaxes only
                        half as fast as the two-sided Holm.
+
+All guarantees are asymptotic: they treat z_ij as normal with the plug-in sandwich covariance.
 
 Every procedure here rejects exactly the pairs with |z| at or above some cutoff, so its declared orderings are
 transitive (`is_transitive`): if i > j and j > k are declared, then z_ik >= min(z_ij, z_jk) because
