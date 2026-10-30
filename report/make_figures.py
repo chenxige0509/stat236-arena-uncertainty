@@ -48,7 +48,7 @@ def save(fig, name):
 # ================================================================ Figure 1: Q1
 q1 = R("q1_summary.csv", index_col=0)
 an = R("q1_analysis_per_model.csv")
-fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.2), gridspec_kw={"width_ratios": [1, 1.25], "wspace": 0.32})
+fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.05), gridspec_kw={"width_ratios": [1, 1.25], "wspace": 0.32})
 vals = [("score CI coverage, per model (nominal 0.95)", "rank spread coverage, per model"),
         ("score CIs: all cover (simultaneous)", "rank spread coverage, simultaneous (all models)")]
 x = np.arange(2)
@@ -58,8 +58,8 @@ for k, (lab, col) in enumerate([("Rating intervals", GRAY1), ("Rank spreads", BL
     pos = x + (k - 0.5) * 0.36
     a.bar(pos, v, width=0.33, color=col, label=lab, zorder=2)
     a.errorbar(pos, v, yerr=1.96 * se, fmt="none", ecolor=INK2, elinewidth=0.8, capsize=2, zorder=3)
-    for p, vv in zip(pos, v):
-        a.text(p, vv + 0.025, f"{vv:.3f}", ha="center", va="bottom", fontsize=7.5)
+    for p, vv, ee in zip(pos, v, se):
+        a.text(p, vv + 1.96 * ee + 0.02, f"{vv:.3f}", ha="center", va="bottom", fontsize=7.5)
 a.axhline(0.95, color=INK2, lw=0.8, ls=(0, (4, 3)))
 a.text(0.5, 0.965, "95%", va="bottom", ha="center", fontsize=7.5, color=INK2)
 a.set_xticks(x, ["Each model", "All 129 models"])
@@ -75,6 +75,7 @@ rho = spearmanr(an.neighbours_within_10pts, an.spread_width)[0]
 sc = b.scatter(an.neighbours_within_10pts + np.random.default_rng(0).uniform(-0.18, 0.18, len(an)), an.spread_width,
                c=an.se, cmap="Blues", vmin=0, vmax=an.se.max() * 1.05, s=14, edgecolors=INK2, linewidths=0.3, zorder=3)
 b.set_xlabel("Models with true rating within 10 points (crowding)")
+b.set_xticks(range(0, 13, 2))
 b.set_ylabel("Mean rank-spread width (ranks)")
 b.text(0.03, 0.95, f"Spearman $\\rho$ = {rho:.2f}", transform=b.transAxes, va="top", fontsize=8)
 cb = fig.colorbar(sc, ax=b, pad=0.02, fraction=0.05)
@@ -88,7 +89,7 @@ save(fig, "fig1_q1.pdf")
 q2 = R("q2_summary.csv", index_col=0)
 sw = R("q2_sweep.csv")
 SIM, WID = "rank interval coverage, simultaneous (all models)", "rank interval width, mean"
-fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.45), gridspec_kw={"width_ratios": [1.1, 1], "wspace": 0.55})
+fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.3), gridspec_kw={"width_ratios": [1.1, 1], "wspace": 0.55})
 z_need = sw.loc[sw.rs_all_cover >= 0.95, "z"].min()
 e = sw[sw.z == z_need].iloc[0]
 bars = [("Arena (uncorrected)", q2.loc[WID, "arena"], q2.loc[SIM, "arena"], BLUE),
@@ -143,10 +144,10 @@ save(fig, "fig2_q2.pdf")
 real = R("q2_real.csv")
 top = real.head(20).iloc[::-1]
 y = np.arange(len(top))
-fig, ax = plt.subplots(figsize=(5.6, 3.7))
-for off, (p, name, col) in zip([0.25, 0.0, -0.25], [("arena", "Arena (uncorrected)", BLUE),
+fig, ax = plt.subplots(figsize=(5.6, 4.4))
+for off, (p, name, col) in zip([0.28, 0.0, -0.28], [("arena", "Arena (uncorrected)", BLUE),
                                                      ("bonferroni", "Bonferroni", ORANGE), ("holm", "Holm", AQUA)]):
-    ax.hlines(y + off, top[f"{p}_best"] - 0.32, top[f"{p}_worst"] + 0.32, color=col, lw=2.6, capstyle="round",
+    ax.hlines(y + off, top[f"{p}_best"] - 0.32, top[f"{p}_worst"] + 0.32, color=col, lw=2.0, capstyle="round",
               label=name, zorder=3)
 ax.set_yticks(y, top.model, fontsize=8)
 ax.set_xticks([1, 5, 10, 15, 20, 25])
@@ -167,9 +168,9 @@ fig, axes = plt.subplots(1, 3, figsize=(W, 2.2), gridspec_kw={"width_ratios": [1
 a = axes[0]
 z = np.clip(q3.z.values, -15, 15)
 bins = np.arange(-15, 15.01, 1)
-a.hist(z, bins=bins, color=GRAY1, edgecolor="white", linewidth=0.4, zorder=2, label=f"2024 board ({N} pairs)")
+a.hist(z, bins=bins, color=GRAY1, edgecolor="white", linewidth=0.4, zorder=2, label="2024 board")
 t = np.linspace(-15, 15, 600)
-a.plot(t, N * norm.pdf(t), color=INK, lw=1.2, zorder=3, label="Null: N(0, 1)")
+a.plot(t, N * norm.pdf(t), color=INK, lw=1.2, zorder=3, label="Null N(0, 1)")
 for s in (-crit, crit):
     a.axvline(s, color=INK2, lw=0.7, ls=(0, (3, 2)))
 a.text(crit + 0.4, 215, f"Bonferroni\n$|z^*|$ = {crit:.2f}", fontsize=7, color=INK2, va="top")
@@ -177,11 +178,11 @@ a.set_xlim(-15, 15)
 a.set_ylim(0, 430)
 a.set_xlabel(r"Standardized specialty $z^*$ (clipped at $\pm$15)")
 a.set_ylabel("Pairs")
-a.legend(loc="upper left", fontsize=7, handlelength=1.0, borderaxespad=0.1)
+a.legend(loc="upper right", fontsize=7, handlelength=1.0, borderaxespad=0.1, frameon=True, facecolor="white", edgecolor="none", framealpha=1)
 panel_label(a, "a")
 TESTS = [("hc", "HC", VIOLET, "o", "-"), ("hc_plus", r"HC$^+$", VIOLET, "s", (0, (3, 1.5))),
          ("max_abs_z", r"min-$P$", MAGENTA, "^", "-"), ("chi2", r"$\chi^2$", GOLD, "D", "-")]
-for ax, th, lab in [(axes[1], 0.3, "b"), (axes[2], 0.5, "c")]:
+for ax, th, lab in [(axes[1], 0.5, "b"), (axes[2], 0.7, "c")]:
     g = grid[grid.theta == th].sort_values("r")
     ax.axhline(0.05, color=MUTED, lw=0.7, ls=(0, (3, 3)))
     for key, name, col, mk, ls in TESTS:
@@ -197,7 +198,7 @@ for ax, th, lab in [(axes[1], 0.3, "b"), (axes[2], 0.5, "c")]:
     panel_label(ax, lab, x=-0.06)
 axes[1].set_ylabel("Power")
 axes[2].tick_params(labelleft=False)
-axes[1].legend(loc="lower right", fontsize=7, handlelength=2.0, bbox_to_anchor=(1.0, 0.1))
+axes[1].legend(loc="lower right", fontsize=7, handlelength=2.0, borderaxespad=0.2, bbox_to_anchor=(1.0, 0.09))
 save(fig, "fig4_q3.pdf")
 # ================================================================ Figure A1: Q1 mean rank spreads by true rank
 pm = R("q2_per_model.csv").sort_values("true_rank")

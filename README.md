@@ -4,6 +4,8 @@ STAT 236 (Fall 2026) final project — Harry Hu, Chloe Yu, Ender Yang, Chenxi Ge
 
 Chatbot Arena ranks LLMs with a Bradley–Terry model and reports a **rank spread** for each model, built from per-model 95% confidence intervals without multiplicity correction. We study how reliable these rank spreads are, and whether differences across category leaderboards are real.
 
+**Deliverables.** Written report: [`report/report.pdf`](report/report.pdf) (LaTeX source `report/report.tex`, figures from `report/make_figures.py`). Project webpage: [`docs/index.html`](docs/index.html), a single static page built by `website/build.py` from `website/template.html` and the committed results; with GitHub Pages set to serve the `main` branch's `/docs` folder it is published at `https://chenxige0509.github.io/stat236-arena-uncertainty/`. Course requirements: [`docs/Project-Instruction-2026.pdf`](docs/Project-Instruction-2026.pdf).
+
 ## Research questions
 
 - **Q1 (Diagnosis):** What is the actual coverage of Arena's rank spread, i.e., how often does it contain the true rank?
@@ -153,7 +155,12 @@ python q3_sim.py --reps 200  # Q3 Step 3: power for planted specialties (about 3
 python q3_figures.py         # Q3 figures in docs/figures/
 ```
 
-Results go to `results/`.
+Results go to `results/`. The report and the webpage only read the committed results:
+
+```bash
+python report/make_figures.py && (cd report && latexmk -pdf report.tex)   # report/report.pdf
+python website/build.py                                                    # docs/index.html
+```
 
 ## References
 
