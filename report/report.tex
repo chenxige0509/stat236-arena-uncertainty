@@ -6,7 +6,6 @@
 \usepackage{amsmath,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{threeparttable}
 \usepackage[font=small,labelfont=bf,skip=4pt]{caption}
 \usepackage{enumitem}
 \usepackage[round,authoryear]{natbib}
@@ -31,67 +30,67 @@
 
 \title{\vspace{-1.6em}How Certain Is the Chatbot Arena Leaderboard?\\[0.2em]
 \large Multiplicity, Rank Spreads and Category Specialties}
-\author{Harry Hu \and Chloe Yu \and Ender Yang \and Chenxi Ge\\[0.3em]
-\normalsize STAT 236 Final Project, Fall 2026}
-\date{\vspace{-1.2em}}
+\author{Harry Hu \and Chloe Yu \and Ender Yang \and Chenxi Ge}
+\date{\vspace{-0.4em}STAT 236 Final Project, Fall 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent Chatbot Arena ranks large language models by fitting a Bradley--Terry model to millions of pairwise human votes, and shows each model's \emph{rank spread}: the ranks consistent with per-model 95\% confidence intervals. We verify on the 2024 public battle data and on the current site that these intervals carry no multiplicity correction. In a semi-synthetic simulation that keeps Arena's real comparison graph, all 129 rank spreads hold simultaneously in 90.9\% of datasets: short of 95\%, but far better than the 0.3\% of datasets in which all score intervals hold. Every correction we study restores simultaneous coverage. Pairwise $z$-tests with Holm's step-down procedure give the narrowest valid rank intervals (11.3 ranks on average, against 13.6 for Bonferroni and 33--43 for the $\chi^2$ set of the original Arena paper), and they remain valid in stress-test worlds with exact and near ties. Category specialties are clearly present on the 2024 board: Higher Criticism, min-$P$ and $\chi^2$ all reject the null of no specialties, and Bonferroni flags 275 of 958 model--category pairs, although that count depends on how well the null's noise level is calibrated.
+\noindent Chatbot Arena ranks large language models by fitting a Bradley--Terry model to pairwise human votes and shows each model's \emph{rank spread}, the ranks consistent with per-model 95\% intervals for the ratings. We verify on the 2024 public data and on the current site that these intervals carry no multiplicity correction. In a semi-synthetic simulation on Arena's real comparison graph, all 129 rank spreads contain the true ranks simultaneously in 90.9\% of datasets, short of 95\% but far above the 0.3\% in which all rating intervals cover. Every correction we study restores simultaneous coverage; among the seven procedures we simulate, pairwise $z$-tests with Holm's step-down procedure give the narrowest valid rank intervals (11.3 ranks on average, against 13.6 for Bonferroni and 33--43 for the $\chi^2$ set of the original Arena paper), and they remain valid when many models are exactly or nearly tied. On Arena's category leaderboards, Higher Criticism, the maximum-$|z|$ test and the $\chi^2$ test all reject the hypothesis of no category specialties, and Bonferroni flags 275 of 958 (model, category) pairs, a count that depends on how well the null's noise level is calibrated.
 \end{abstract}
 
 %====================================================================
 \section{Introduction}\label{sec:intro}
 
-Chatbot Arena (now LMArena) is the most widely cited leaderboard for large language models. A user submits a prompt, two anonymous models answer, and the user votes for the better answer. The site fits a Bradley--Terry (BT) model \citep{bradley1952rank} to these votes and ranks models by estimated strength. Since 2025 it also reports each model's \emph{rank spread}, the best and worst rank the model could hold given all models' score intervals \citep{lmarena2025ranking}. A reader who sees ``rank 2--10'' naturally takes it as a confidence statement about the rank.
+Chatbot Arena, now run by LMArena at arena.ai, is the most widely cited leaderboard for large language models. Users vote for the better of two anonymous answers, and the site ranks the models by a Bradley--Terry (BT) fit \citep{bradley1952rank} to these votes. Since 2025 it has also reported each model's \emph{rank spread}, the best and worst rank the model could hold given the rating intervals of all models \citep{lmarena2025ranking}; a reader who sees ``rank 2--10'' naturally takes it as a confidence statement.
 
-The paper behind the site \citep{chiang2024arena} notes that a ranking depends on all scores at once and therefore needs simultaneous intervals; it proposes a $\chi^2$ confidence set for this. The current open-source code \citep{lmarena2025arenarank} instead computes per-model 95\% intervals $\hat r_m \pm 1.96\,\SE_m$. Plugging these into the rank-spread formula creates two errors that push in opposite directions. Without a multiplicity correction about 5\% of the intervals miss, roughly 6 of 129 models in 2024 and 20 of today's 400. But the rank spread separates two models only when their intervals do not overlap at all, which for two independent estimates with equal errors is a test at $|z| > 1.96\sqrt2 = 2.77$, the 99.4\% level. Which error wins is not known. A second question concerns Arena's category leaderboards: with about a thousand (model, category) pairs, some apparent ``specialties'' will arise by chance.
+The paper behind the site \citep{chiang2024arena} notes that a ranking depends on all ratings at once and therefore needs intervals that hold simultaneously, and it proposes a $\chi^2$ confidence set for this purpose. The current open-source code \citep{lmarena2025arenarank} instead computes per-model 95\% intervals, $\hat r_m \pm 1.96\,\SE_m$. This introduces two errors that act in opposite directions. Without a multiplicity correction, about 5\% of the intervals fail to cover (6 of 129 models in 2024, 20 of today's 400). But the rank spread separates two models only when their intervals do not overlap, which for two independent estimates with equal standard errors is a test at $|z| > 1.96\sqrt2 = 2.77$, the 99.4\% level. Their combined effect on simultaneous coverage has not, to our knowledge, been measured. Arena also publishes category leaderboards (coding, math, Chinese and others). We call a \emph{specialty} a (model, category) pair in which the model is stronger or weaker than its overall rating predicts; with about a thousand such pairs, some apparent specialties will arise by chance.
 
-We ask: \textbf{(Q1)} how often Arena's rank spread contains the true rank, model by model and for all models at once; \textbf{(Q2)} which multiplicity-corrected procedures restore 95\% simultaneous coverage, and at what cost in width; and \textbf{(Q3)} whether category specialties exist, and which (model, category) pairs have them. True ranks are unknown on real data, so Q1 and Q2 use a semi-synthetic simulation: the BT fit on the real 2024 battles is the truth, every real matchup is kept, outcomes are redrawn, and Arena's method is rerun and checked against the true ranks. For Q3 we calibrate specialty statistics by a parametric bootstrap and compare Higher Criticism \citep{donoho2004higher} with min-$P$ and $\chi^2$ in the Rare/Weak framework.
+We ask three questions. \textbf{Q1:} How often does Arena's rank spread contain the true rank, model by model and for all models at once? \textbf{Q2:} Which multiplicity-corrected procedures restore 95\% simultaneous coverage, and how much wider are their rank intervals? \textbf{Q3:} Do category specialties exist, and if so, which pairs have them? Because true ranks are unknown on real data, Q1 and Q2 use a semi-synthetic simulation in which the BT fit on the real 2024 battles is the truth and only the outcomes are redrawn. For Q3 we calibrate specialty statistics by a parametric bootstrap and compare Higher Criticism \citep{donoho2004higher} with the maximum-$|z|$ (min-$P$) and $\chi^2$ tests under the sparse-signal (Rare/Weak) model \citep{donoho2015higher}.
 
-Related work on inference for ranks includes bootstrap intervals \citep{hall2009using}, joint confidence regions for a ranking \citep{klein2020joint}, and simultaneous confidence sets built from pairwise differences with step-down testing \citep{mogstad2024inference}; our pairwise Holm procedure is the Bonferroni--Holm version of the last. We evaluate these ideas on Arena's data and comparison graph, against the procedure Arena actually uses.
+Related work on inference for ranks includes bootstrap intervals \citep{hall2009using}, joint confidence regions for a ranking \citep{klein2020joint}, and simultaneous confidence sets built from pairwise differences with step-down testing \citep{mogstad2024inference}; our pairwise Holm procedure is the Bonferroni--Holm version of the last. We evaluate these ideas on Arena's own data and comparison graph.
 
 %====================================================================
 \section{Data and Arena's method}\label{sec:data}
 
-\paragraph{Data.} We use the public battle dump released with \citet{chiang2024arena} \citep{lmsys2024dump} and the official leaderboard snapshot of 2024-08-12 \citep{lmarena2026dataset} as an answer key. The official filter (anonymous battles, the de-duplicated subsample, battles up to the snapshot time) leaves 1,657,517 battles among 129 models. Only 3,457 of the $\binom{129}{2} = 8{,}256$ pairs ever met, and 34.5\% of battles are ties. For the current site we use the 2026 boards in \texttt{leaderboard-dataset} and a record of what arena.ai displayed for its top 59 models on 2026-10-08.
+\paragraph{Data.} We use the public battle dump released with \citet{chiang2024arena} \citep{lmsys2024dump} and, as an answer key, the official leaderboard snapshot \texttt{elo\_results\_20240813} (last updated 2024-08-12) \citep{lmarena2026dataset}. The official filter (anonymous battles, the de-duplicated subsample, battles up to the snapshot time) leaves 1,657,517 battles among $M = 129$ models. Only 3,457 of the $K = \binom{129}{2} = 8{,}256$ pairs ever met, and 34.5\% of battles are ties. Unlike the 2025 sample named in our proposal, this dump comes with an answer key computed by Arena from the same battles. For the current site we use the 2026 boards in \texttt{leaderboard-dataset} (downloaded 2026-10-28) and a record, made on 2026-10-12, of what arena.ai displayed for its top 59 models on the 2026-10-08 board.
 
-\paragraph{Model.} Code a battle between models $i$ and $j$ as $y \in \{1, \tfrac12, 0\}$ (win, tie, loss for $i$) and write $\sigma(x) = 1/(1 + e^{-x})$. Arena's \texttt{arena-rank} package estimates strengths by the logistic loss with fractional outcomes,
+\paragraph{Model.} Code a battle between models $i$ and $j$ as $y \in \{1, \tfrac12, 0\}$ (win, tie, loss for $i$) and write $\sigma(x) = 1/(1 + e^{-x})$. Arena's \texttt{arena-rank} package estimates the strengths $\beta$ by minimizing the logistic loss with fractional outcomes,
 \begin{equation}\label{eq:loss}
 \hb = \arg\min_{\beta}\; -\sum_{\text{battles}} \bigl[\,y\,(\beta_i - \beta_j) - \log\bigl(1 + e^{\beta_i - \beta_j}\bigr)\bigr],
 \end{equation}
-whose target is $\mathbb E[y] = \sigma(\beta_i - \beta_j)$, and reports ratings $\hat r_m = 1000 + (400/\ln 10)\,\hb_m$. Its covariance is the sandwich estimate $\hat V = \hat H^{-1}\hat G\hat H^{-1}$ \citep{white1980heteroskedasticity}, with $\hat H$ the Hessian of \eqref{eq:loss} and $\hat G$ the covariance of the per-battle gradients. Arena's intervals are $[L_m, U_m] = \hat r_m \pm 1.96\,\SE_m$, $\SE_m = \hat V_{mm}^{1/2}$, and the rank spread is
+whose population minimizer satisfies $\mathbb E[y] = \sigma(\beta_i - \beta_j)$. It reports ratings $\hat r_m = 1000 + (400/\ln 10)\,\hb_m$. The covariance of $\hb$ is estimated by the sandwich $\hat V = \hat H^{-1}\hat G\hat H^{-1}$ \citep{white1980heteroskedasticity}, with $\hat H$ the Hessian of \eqref{eq:loss} and $\hat G$ the covariance of the per-battle gradients; below, $\hat V$ is on the rating scale. Arena's rating intervals are $[L_m, U_m] = \hat r_m \pm 1.96\,\SE_m$ with $\SE_m = \hat V_{mm}^{1/2}$, and the rank spread is
 \begin{equation}\label{eq:spread}
 \text{best}_m = 1 + \#\{m' : L_{m'} > U_m\}, \qquad \text{worst}_m = 1 + \#\{m' \neq m : U_{m'} > L_m\}.
 \end{equation}
+We reserve \emph{rank spread} for this construction and call the output of any procedure a \emph{rank interval}. Its width is $\text{worst}_m - \text{best}_m + 1$, so a model with a single rank has width 1.
 
-\paragraph{Step 0: our Arena method is Arena's method.} Refitting the public battles with \texttt{arena-rank} reproduces the 2024 board's ratings to a median of 0.06 points. The 2024 intervals are exactly the quantiles of the 100 bootstrap fits stored in the snapshot, with a half-width of 1.90 bootstrap SDs, as expected for per-model 95\% intervals; Bonferroni or $\chi^2$ would need 3.55 or 12.42. On the current site every interval on all 4,773 published 2026 text boards is $\hat r \pm 1.9600\,\SE$, and \eqref{eq:spread} applied to the published intervals reproduces both ends of the site's rank spread for all 59 recorded models (Appendix~\ref{app:step0}). In 2024 as now, the rank spread is built from uncorrected per-model intervals.
+\paragraph{Validation against the published boards.} Refitting the public battles with \texttt{arena-rank} reproduces the 2024 ratings to a median of 0.06 points, and the 2024 intervals have a half-width of 1.90 bootstrap SDs, as expected for per-model 95\% intervals (Bonferroni or $\chi^2$ intervals for the board's 128 models would need 3.55 or 12.42). On the current site every interval on all 4,773 published 2026 text-board snapshots is $\hat r \pm 1.9600\,\SE$, and \eqref{eq:spread} applied to the published intervals reproduces both ends of the site's rank spread for all 59 recorded models (Appendix~\ref{app:step0}). In 2024 as now, the rank spread is built from uncorrected per-model intervals.
 
 %====================================================================
 \section{Methods}\label{sec:methods}
 
-\subsection{Semi-synthetic simulation and a reduction to orderings}\label{sec:sim}
+\subsection{Semi-synthetic simulation}\label{sec:sim}
 
-We fit \eqref{eq:loss} once on the real battles and treat the fitted strengths $\beta^*$ as the truth, with true ranks $r_m = 1 + \#\{m' : \beta^*_{m'} > \beta^*_m\}$. Each simulated dataset keeps the same 3,457 pairs with their real battle counts and redraws the outcomes: with $p = \sigma(\beta^*_i - \beta^*_j)$ and the observed tie rate $t = 0.345$, a battle is a win, tie or loss for $i$ with probabilities $p - t/2$, $t$, $1 - p - t/2$. This keeps $\mathbb E[y] = p$, so $\beta^*$ is exactly the estimand of \eqref{eq:loss}. We refit, apply every procedure to the same fit, and repeat 1,000 times, recording per-model coverage, simultaneous coverage (all 129 intervals right), mean width, and false orderings (``$i$ above $j$'' with $\beta^*_i \le \beta^*_j$), each with a Monte Carlo standard error (Appendix~\ref{app:impl}). The following lemma, which applies to every procedure below, reduces rank intervals to declared orderings.
+We fit \eqref{eq:loss} once on the real battles, treat the fitted strengths $\beta^*$ as the truth, and define the true ranks $R_m = 1 + \#\{m' : \beta^*_{m'} > \beta^*_m\}$. Each simulated dataset keeps the same 3,457 pairs with their real battle counts and redraws the outcomes. With $p = \sigma(\beta^*_i - \beta^*_j)$ and the observed tie rate $t = 0.345$, a battle is a win, tie or loss for $i$ with probabilities $p - t/2$, $t$ and $1 - p - t/2$, so that $\mathbb E[y] = p$ and $\beta^*$ is exactly the estimand of \eqref{eq:loss}. We refit, apply every procedure to the same fit, and repeat 1,000 times. We record per-model and simultaneous coverage, mean width, and \emph{false orderings} (``$i$ above $j$'' declared although $\beta^*_i \le \beta^*_j$), each with a Monte Carlo SE (Appendix~\ref{app:impl}).
 
 \begin{lemma}\label{lem:orderings}
-Let a procedure declare a set $D$ of orderings ``$i$ above $j$'', and let $\text{best}_m = 1 + \#\{i : (i, m) \in D\}$ and $\text{worst}_m = M - \#\{j : (m, j) \in D\}$. For $D = \{(i, j) : L_i > U_j\}$ this is the rank spread \eqref{eq:spread}. If $D$ contains no false ordering, then $\text{best}_m \le r_m \le \text{worst}_m$ for every $m$.
+Let a procedure declare a set $D$ of orderings ``$i$ above $j$'', and let $\text{best}_m = 1 + \#\{i : (i, m) \in D\}$ and $\text{worst}_m = M - \#\{j : (m, j) \in D\}$. For $D = \{(i, j) : L_i > U_j\}$ this is the rank spread \eqref{eq:spread}. If $D$ contains no false ordering, then $\text{best}_m \le R_m \le \text{worst}_m$ for every $m$.
 \end{lemma}
 \begin{proof}
-If all declared orderings are true, the models declared above $m$ are among those truly above it, and those declared below $m$ are among the at most $M - r_m$ models truly below it.
+If all declared orderings are true, the models declared above $m$ are among the $R_m - 1$ models truly above it, and those declared below $m$ are among the at most $M - R_m$ models truly below it.
 \end{proof}
 
-So any procedure whose probability of a false ordering is at most 5\% has simultaneous rank coverage of at least 95\%. A false ordering needs two models with nearly equal strengths: a score interval that misses does no harm unless it crosses a close neighbour's.
+Hence any procedure whose probability of a false ordering is at most 5\% has simultaneous rank coverage of at least 95\% (cf.\ \citealp{mogstad2024inference}; with tied strengths $R_m$ is the best rank of the tied group). A false ordering needs two models of nearly equal strength, so a rating interval that fails to cover matters only if it crosses the interval of a close neighbor.
 
 \subsection{Corrected procedures (Q2)}\label{sec:procs}
 
-\Cref{tab:procs} lists when each procedure declares $i$ above $j$. Bonferroni and the $\chi^2$ set keep Arena's overlap rule and widen the intervals. The $\chi^2$ set of \citet{chiang2024arena}, $\{\beta : (\hb - \beta)^\top\hat V^{-}(\hb - \beta) \le \chi^2_{M-1,\,0.95}\}$, projects onto each coordinate as $\hb_m \pm 12.47\,\SE_m$; read through pairwise contrasts \citep{scheffe1953method} it declares $i$ above $j$ when $\beta_i > \beta_j$ on the whole set. The pairwise procedures test each pair directly with
+\Cref{tab:procs} lists when each procedure declares $i$ above $j$. Bonferroni and the $\chi^2$ set widen the intervals and keep the overlap rule. The $\chi^2$ set of \citet{chiang2024arena}, $\{\beta : (\hb - \beta)^\top\hat V^{-}(\hb - \beta) \le \chi^2_{M-1,\,0.95}\}$, is used either projected onto each coordinate or through pairwise contrasts \citep{scheffe1953method}. The pairwise procedures test each pair directly with
 \[
 z_{ij} = \frac{\hat r_i - \hat r_j}{\SE(\hat r_i - \hat r_j)}, \qquad \SE(\hat r_i - \hat r_j)^2 = \hat V_{ii} + \hat V_{jj} - 2\hat V_{ij}.
 \]
-In these units the overlap rule demands $|z_{ij}| > 1.96\,\rho_{ij}$ with $\rho_{ij} = (\SE_i + \SE_j)/\SE(\hat r_i - \hat r_j)$. On the real fit $\rho_{ij}$ ranges from 1.09 to 1.73 (median 1.37); it exceeds $\sqrt2$ when estimates are positively correlated, as for models that play each other often or face the same opponents. Pairwise Bonferroni uses $z_{1-\alpha/(2K)} = 4.52$ for all $K = 8{,}256$ pairs. Holm \citep{holm1979simple} compares the $k$-th largest $|z|$ with $z_{1-\alpha/(2(K-k+1))}$, stops at the first failure, and declares each rejected pair in the direction of $z_{ij}$. One-sided Holm applies Holm's procedure to the $2K$ hypotheses $H_{ij}: \beta_i \le \beta_j$, whose rejection is exactly the ordering ``$i$ above $j$''; its $k$-th bar is $z_{1-\alpha/(2K-k+1)}$, which never falls below $z_{1-\alpha/(K+1)} = 4.38$.
+In these units the overlap rule requires $|z_{ij}| > 1.96\,\rho_{ij}$ with $\rho_{ij} = (\SE_i + \SE_j)/\SE(\hat r_i - \hat r_j)$. On the real fit $\rho_{ij}$ ranges from 1.09 to 1.73 (median 1.37); it exceeds $\sqrt2$ only for the 20\% of pairs whose estimates are clearly positively correlated, typically models that play each other often or share many opponents. \emph{Pairwise Bonferroni} uses the critical value $z_{1-\alpha/(2K)} = 4.52$ for all pairs. \emph{Holm} \citep{holm1979simple} compares the $k$-th largest $|z|$ with $c_k = z_{1-\alpha/(2(K-k+1))}$, stops at the first pair that fails, and declares each rejected pair in the direction of $z_{ij}$. \emph{One-sided Holm} applies Holm's procedure to the $2K$ hypotheses $H_{ij}: \beta_i \le \beta_j$, whose rejection is exactly the ordering ``$i$ above $j$''; its $k$-th critical value is $z_{1-\alpha/(2K-k+1)}$.
 
 \begin{table}[t]
 \centering\small
@@ -100,110 +99,107 @@ In these units the overlap rule demands $|z_{ij}| > 1.96\,\rho_{ij}$ with $\rho_
 \toprule
 Procedure & Rule & False orderings controlled \\
 \midrule
-Arena (uncorrected) & gap $> 1.96\,(\SE_i + \SE_j)$ & none \\
+Arena (uncorrected) & gap $> 1.96\,(\SE_i + \SE_j)$ & no \\
 Bonferroni intervals & gap $> 3.55\,(\SE_i + \SE_j)$ & proven \\
 $\chi^2$ projection & gap $> 12.47\,(\SE_i + \SE_j)$ & proven \\
 $\chi^2$ Scheff\'e & $z_{ij} > 12.47$ & proven \\
 Pairwise Bonferroni & $z_{ij} > 4.52$ & proven \\
-Holm (two-sided) & $z_{ij} >$ step-down bar, 4.52 falling toward 1.96 & exact ties only \\
-Holm (one-sided) & $z_{ij} >$ step-down bar, 4.52 falling to $\ge$ 4.38 & proven \\
+Holm & $z_{ij} > c_k$, step-down from 4.52 toward 1.96 & for exact ties only \\
+One-sided Holm & $z_{ij} > c_k$, step-down from 4.52, never below 4.38 & proven \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Guarantees.} By \cref{lem:orderings} the quantity to control is the probability of a false ordering. Bonferroni-type rules bound it by the union bound. Holm's theorem bounds the chance of rejecting any \emph{true} hypothesis, which for the one-sided version are exactly the false orderings. For the textbook two-sided Holm, exactly tied pairs are true nulls and are covered, but a close, untied pair is a false null whose possible error is a wrong \emph{direction}. Directional control after a two-sided Holm is proven for independent statistics under conditions normal ones meet \citep{shaffer1980control}; our $z_{ij}$ are never independent, since pairs share models, and for dependent statistics the question is open \citep{finner1999stepwise, guo2016directional}. We test it empirically below. A proof buys little here: each pair always keeps one true one-sided hypothesis, so declaring orderings never reduces the number of ways to be wrong. Finally, all three pairwise procedures declare exactly the pairs with $|z|$ above a cutoff; because $\SE(\hat r_i - \hat r_k) \le \SE(\hat r_i - \hat r_j) + \SE(\hat r_j - \hat r_k)$, declaring $i > j$ and $j > k$ implies $z_{ik} \ge \min(z_{ij}, z_{jk})$, so their orderings are always transitive.
+\paragraph{Guarantees.} By \cref{lem:orderings} the quantity to control is the probability of any false ordering. Bonferroni-type rules bound it by the union bound. Holm's theorem bounds the probability of rejecting any \emph{true} hypothesis, and for one-sided Holm the true hypotheses are exactly the false orderings. For Holm, an exactly tied pair is a true null and is covered by the theorem, but a pair that is close and not tied is a false null, and its possible error is a wrong \emph{direction}. Directional control after a two-sided Holm procedure is proven for independent normal statistics \citep{shaffer1980control}, but our $z_{ij}$ are dependent because pairs share models, and for dependent statistics only special structures are covered \citep{finner1999stepwise, guo2016directional}; we test it by simulation. The proven one-sided version gains little from stepping down: at most one of $H_{ij}$ and $H_{ji}$ can be rejected, so after $k$ rejections at least $2K - k + 1 \ge K + 1$ hypotheses remain, and its critical value never falls below $z_{1-\alpha/(K+1)} = 4.38$. The declared orderings of all three pairwise procedures are always transitive (Appendix~\ref{app:q2}).
 
-\paragraph{Benchmark and stress tests.} As an oracle benchmark we recompute rank spreads from $\hb \pm z\,\SE$ for $z \in [1.8, 4]$ and find the smallest $z$ reaching 95\% simultaneous coverage; it needs the true ranks, so it is not a procedure. To probe the guarantees where they bind, we rerun the simulation on the same graph with changed strengths: all strengths scaled by 0.5, 0.25, 0.1 or 0; models sorted into 20 or 10 tiers of exactly equal strength (354 or 768 tied pairs); and 20 tiers in which each model keeps 5\%, 10\% or 20\% of its distance from the tier mean (median within-tier gap 0.1--0.4 standard errors). In the last three worlds every error is a wrong direction, the unproven case.
+\paragraph{Benchmark and stress tests.} As an oracle benchmark we recompute rank spreads from $\hb \pm z\,\SE$ on a grid of $z$ from 1.8 to 4 and find the smallest $z$ that reaches 95\% simultaneous coverage; it uses the true ranks, so it is not a procedure. To test the guarantees where they bind, we rerun the simulation on the same graph with all strengths scaled by 0.5, 0.25, 0.1 or 0; with the models sorted into 20 or 10 equal-size tiers of exactly equal strength (354 or 768 tied pairs); and with 20 tiers in which each model keeps 5\%, 10\% or 20\% of its distance from the tier mean (median within-tier gaps of 0.1--0.4 SEs), where every false ordering is a wrong-direction error not covered by Holm's theorem.
 
 \subsection{Category specialties (Q3)}\label{sec:q3methods}
 
-We define eight categories from the dump's prompt tags (coding, math, instruction following, hard prompts, Chinese, Russian, multi-turn, long query); each reproduces the official 2024 board of the same name (Appendix~\ref{app:q3}). We test the $N = 958$ (model, category) pairs with at least 200 category battles. For model $m$ in category $c$, with $y_b$ its score in battle $b$ and $p_b = \sigma(\hb_m - \hb_{o(b)})$ the win probability implied by the \emph{overall} fit,
+We define eight categories from the dump's prompt tags (coding, math, instruction following, hard prompts, Chinese, Russian, multi-turn, long query). Each definition reproduces the official 2024 board of the same name (Appendix~\ref{app:q3}). We test the $N = 958$ (model, category) pairs with at least 200 battles in the category. For model $m$ in category $c$, let $y_b$ be its score in battle $b$ and $p_b = \sigma(\hb_m - \hb_{o(b)})$ the win probability implied by the \emph{overall} fit against opponent $o(b)$. The specialty statistic is
 \[
-z_{mc} = \textstyle\sum_b (y_b - p_b) \big/ \sqrt{\sum_b (y_b - p_b)^2}
+z_{mc} = \textstyle\sum_b (y_b - p_b) \big/ \sqrt{\sum_b (y_b - p_b)^2},
 \]
-over $m$'s battles in $c$. Because the overall fit uses these battles too, $z_{mc}$ is shrunk toward zero and the $z_{mc}$ are correlated. We therefore calibrate by a parametric bootstrap under the null of no specialties (redraw all outcomes from the overall fit and refit, 500 times); the raw null SDs range from 0.70 to 1.05. Each $z_{mc}$ is standardized against its null mean and SD to $z^*_{mc}$, with two-sided $p$-values from $N(0,1)$.
+summed over $m$'s battles in $c$ (the empirical variance accounts for ties). The overall fit uses these battles too, so $z_{mc}$ is shrunk toward zero and the $z_{mc}$ are correlated. We therefore calibrate by a parametric bootstrap under the null of no specialties: redraw all outcomes from the overall fit and refit, 500 times. Under the null the raw $z_{mc}$ have standard deviations from 0.70 to 1.05. Each $z_{mc}$ is standardized against its own null mean and SD to $z^*_{mc}$, with two-sided $p$-values from $N(0,1)$.
 
-To ask whether \emph{any} specialty exists we use Higher Criticism, $\mathrm{HC} = \max_{k \le N/2} \sqrt N\,(k/N - p_{(k)})/\sqrt{p_{(k)}(1 - p_{(k)})}$, its variant HC$^+$ restricted to $p_{(k)} > 1/N$, min-$P$ ($\max|z^*|$) and $\chi^2 = \sum z^{*2}$, each with a $p$-value from the null draws. To ask \emph{which}, we use Bonferroni (family-wise 5\%) and Benjamini--Hochberg \citep{benjamini1995controlling} (FDR 10\%). For power we plant $s = N^{1-\vartheta}$ specialties of strength $\mu = \sqrt{2r\log N}$ in $z$ units \citep{donoho2015higher}, $\vartheta \in \{0.2, \dots, 0.7\}$, $r \in \{0.1, \dots, 1.5\}$, 200 replicates per cell, with critical values from fresh null draws.
+To test whether \emph{any} specialty exists we use Higher Criticism,
+\[
+\mathrm{HC} = \max_{k \le N/2} \frac{\sqrt N\,(k/N - p_{(k)})}{\sqrt{p_{(k)}(1 - p_{(k)})}},
+\]
+its variant HC$^+$ restricted to $p_{(k)} > 1/N$, the maximum-$|z^*|$ test (min-$P$) and $\chi^2 = \sum z^{*2}$, each with its $p$-value from the null draws. To find \emph{which} pairs, we use Bonferroni at family-wise level 5\% and Benjamini--Hochberg \citep{benjamini1995controlling} at false discovery rate 10\%. For power, we plant $s = N^{1-\vartheta}$ specialties with random signs at random pairs, for $\vartheta \in \{0.2, 0.3, \dots, 0.7\}$, with strength set so that each planted $z$ has mean $\mu = \sqrt{2r\log N}$ before the refit, for $r \in \{0.1, 0.2, 0.4, 0.8, 1.5\}$; 200 replicates per cell, with critical values from fresh null draws.
 
 %====================================================================
 \section{Results}\label{sec:results}
 
-\subsection{Q1: the rank spread is nearly right, by cancellation}\label{sec:q1}
+\subsection{Q1: Coverage of Arena's rank spreads}\label{sec:q1}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig1_q1.pdf}
-\caption{Q1, 1,000 simulated datasets. (a) Coverage of Arena's score intervals and rank spreads, for each model and for all 129 at once, with 95\% Monte Carlo intervals. (b) Mean rank-spread width of each model against the number of models with true rating within 10 points, colored by standard error.}\label{fig:q1}
+\caption{Q1, 1,000 simulated datasets. (a) Coverage of Arena's rating intervals and rank spreads, for each model and for all 129 models at once, with 95\% Monte Carlo intervals. (b) Mean rank-spread width of each model against the number of models whose true rating is within 10 points of its own, colored by the model's standard error.}\label{fig:q1}
 \end{figure}
 
-Each score interval covers its true score 94.8\% of the time, but on average 6.65 of the 129 miss, and all 129 cover in only 3 of 1,000 datasets (\cref{fig:q1}a). The rank spreads are far more robust: each contains its true rank 99.9\% of the time, and all 129 do so in $90.9\% \pm 0.9\%$ of datasets. Only 103 of the 129,000 simulated rank spreads missed. The shortfall from 95\% is 4.5 Monte Carlo SEs: real, but small.
+The simulated rank spreads are as wide as the real ones (8.0 against 7.9 ranks). Each rating interval covers its true rating 94.8\% of the time, but on average 6.65 of the 129 fail to cover, and all 129 cover in only 3 of 1,000 datasets (\cref{fig:q1}a). The rank spreads cover far more often: each contains its true rank 99.9\% of the time, and all 129 do so in 90.9\% of datasets (Monte Carlo SE 0.9\%). The shortfall from 95\% is small but well beyond Monte Carlo error (4.5 SEs).
 
-The two errors nearly cancel. A missed score interval rarely changes a rank (\cref{lem:orderings}), and the overlap rule's conservatism absorbs most of the remaining misses. The result is too conservative for a single model and slightly anti-conservative for the whole table. Nothing in the method targets either level, so the 91\% should move with the number of models, their spacing and the amount of data. The simulated spreads match the real ones in width (8.0 against 7.9 ranks).
+The two effects nearly cancel: by \cref{lem:orderings} a rank spread fails only through a false ordering, and the overlap rule's conservatism absorbs most of the rating intervals that fail to cover. The rank spread is thus very conservative for each model and slightly anti-conservative jointly. Its simultaneous coverage barely changes when all strengths are scaled down (90.1--91.5\% at scales 0.5 to 0.1, which act like up to 100 times less data), but it collapses once models are exactly or nearly tied (\cref{sec:q2}). Across models, spread width is most strongly associated with crowding, the number of models within 10 rating points (Spearman correlation 0.79; \cref{fig:q1}b), and much less with the standard error (0.27) or the true rank (0.23; Appendix~\ref{app:q1}).
 
-The main driver of rank instability is crowding (\cref{fig:q1}b): the number of models within 10 rating points has Spearman correlation 0.79 with the spread width, against 0.27 for the standard error and 0.23 for the true rank, and in a joint regression strength is not significant ($t = 1.1$). Spreads are widest for true ranks 61--100 (12.1 ranks), where models are densest (Appendix~\ref{app:q1}).
-
-\subsection{Q2: pairwise tests with Holm give the narrowest valid rank intervals}\label{sec:q2}
+\subsection{Q2: Corrected rank intervals}\label{sec:q2}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig2_q2.pdf}
-\caption{Q2. (a) Mean rank-interval width on the 1,000 datasets of Q1; in parentheses, the share of datasets in which all 129 intervals contain the true ranks. *The oracle chooses $z$ using the true ranks. (b) Probability of any false ordering in the stress-test worlds (1,000 datasets each), with 95\% Monte Carlo intervals; the dashed line is the 5\% target.}\label{fig:q2}
+\caption{Q2. (a) Mean rank-interval width on the 1,000 datasets of Q1; in parentheses, the share of datasets in which all 129 rank intervals contain the true ranks. *The oracle chooses $z$ using the true ranks. (b) Probability of any false ordering in the stress-test worlds (1,000 datasets each), with 95\% Monte Carlo intervals; the dashed line is the 5\% target. Arena is not shown in (b) because its values (34--100\%) are off the scale.}\label{fig:q2}
 \end{figure}
 
-Every correction reaches 100\% simultaneous coverage without a single false ordering, but the costs differ fourfold (\cref{fig:q2}a). The $\chi^2$ set is by far the most expensive (33.1 ranks read through contrasts, 43.4 projected): it protects every linear combination of the 129 scores, and its multiplier $\sqrt{\chi^2_{128,0.95}} = 12.47$ grows like $\sqrt M$, whereas a ranking only needs the signs of $K$ differences, for which $\sqrt{2\log K}$ suffices. Bonferroni intervals need 13.6 ranks. Pairwise Holm needs 11.3, 18\% less, and detects 92.0\% of the true orderings against Bonferroni's 90.1\%.
+Every correction reaches 100\% simultaneous coverage without a single false ordering, but the widths differ by a factor of four (\cref{fig:q2}a). The $\chi^2$ set is by far the most expensive: 33.1 ranks read through contrasts and 43.4 projected. It protects every linear combination of the 129 strengths, and its critical value $\sqrt{\chi^2_{128,\,0.95}} = 12.47$ grows like $\sqrt M$, whereas a ranking depends only on the signs of $K$ differences, whose Bonferroni critical value grows only like $\sqrt{2\log K}$. Bonferroni intervals need 13.6 ranks. Holm needs 11.3, 18\% less, and it detects 92.0\% of the true orderings against Bonferroni's 90.1\%.
 
-The gain has two sources. Testing each gap directly saves 0.9 ranks (13.6 to 12.7): the overlap rule inflates a gap's uncertainty by $\rho_{ij} \approx 1.37$, which costs more than the move from $M$ to $K$ tests (3.55 to 4.52) adds. Holm's step-down saves 1.5 more: about 7,600 pairs are rejected, many with $|z| > 20$, so the bar for the rest falls from 4.52 to 3.96. The one-sided Holm, whose control is proven, reaches only 12.4 because its bar stops at 4.38. All corrections still overshoot: the oracle reaches 95.6\% at $z = 2.1$ with 8.5 ranks.
+The gain has two sources. Testing each difference directly saves 0.9 ranks (13.6 to 12.7), because the overlap rule effectively multiplies the critical value by $\rho_{ij} \approx 1.37$ ($3.55 \times 1.37 \approx 4.86 > 4.52$). Holm's step-down saves 1.5 ranks more. About 7,600 pairs are rejected, many with $|z| > 20$, so the critical value for the remaining pairs falls from 4.52 to 3.96. One-sided Holm reaches only 12.4 ranks, because its critical value cannot fall below 4.38. All corrections still overshoot the target: the oracle reaches 95.6\% coverage at $z = 2.1$ with 8.5 ranks.
 
-\paragraph{Stress tests.} A false ordering needs a pair whose true gap $\delta$ (in SEs) is near zero, since its probability is about $\Phi(-\delta - \text{bar})$; the 2024 strengths have few such pairs, while family-wise bounds are built for many exact ties. \Cref{fig:q2}b shows the worlds where the bounds bind. With 20 or 10 exactly tied tiers, Holm's bar falls to 3.96--4.01 and it declares a false ordering in 3.1\% and 3.4\% of datasets, against at most 0.5\% for procedures with a fixed or slowly falling bar. This matches the bar: a tied pair clears 3.96 with probability $7.6 \times 10^{-5}$, and $354 \times 7.6 \times 10^{-5} = 2.7\%$. With all models tied the three pairwise procedures coincide at 2.7\%, below 5\% because the 8,256 statistics are positively correlated. In the near-tie worlds, the unproven case, Holm's error rate falls to 1.7\%, 0.4\% and 0.6\% as the spread grows, and its coverage stays at or above 99.4\%. Exact ties, which Holm's theorem covers, are the hardest case. Arena's uncorrected spreads collapse once ties exist: all hold in 24\%, 7\% and 0.2\% of datasets with 20 tiers, 10 tiers and all models tied (Appendix~\ref{app:q2}).
+\paragraph{Stress tests.} A pair whose true gap is $\delta$ standard errors is declared in the wrong direction with probability about $\Phi(-\delta - c)$, where $c$ is the critical value it faces. The 2024 strengths have few near-ties, whereas family-wise bounds must hold in the worst case; \cref{fig:q2}b shows the worlds where they bind. With 20 or 10 exactly tied tiers, Holm's critical value falls to 3.96 or 4.01, and Holm declares a false ordering in 3.1\% and 3.4\% of datasets, against at most 0.5\% for the other pairwise procedures. This is close to the union bound over the tied pairs ($354 \times 2\Phi(-3.96) \approx 2.7\%$ for 20 tiers; 4.6\% for 10 tiers, where dependence pulls the observed rate below the bound). With all models tied, the three pairwise procedures coincide at 2.7\% (below the 4.9\% of independent tests). In the near-tie worlds, where Holm has no proven guarantee, its error rate is 1.7\% at a 5\% spread and 0.4--0.6\% at larger spreads, and its simultaneous coverage stays at or above 99.4\%. Exact ties, which Holm's theorem covers, are the hardest case, and once they exist Holm's extra width nearly disappears: the oracle needs $z = 2.7$ and 10.7 ranks with 20 tied tiers, against Holm's 11.3, and $z = 2.85$ and 13.8 ranks with 10 tiers, against 14.0. Arena's uncorrected spreads all hold in only 24\%, 7\% and 0.2\% of datasets with 20 tiers, 10 tiers and all models tied (Appendix~\ref{app:q2}).
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.84\textwidth]{figures/fig3_q2_real.pdf}
-\caption{Rank intervals of the 20 highest-rated models on the 2024 board (our refit of the public battles).}\label{fig:real}
-\end{figure}
 
-\paragraph{The real 2024 board.} Holm keeps each of the top three models at a single rank, as Arena does, whereas Bonferroni ties the top two (\cref{fig:real}). The mean width over all 129 models is 7.9 for Arena, 11.4 for Holm and 13.8 for Bonferroni. Of the 7,808 orderings Arena declares, Holm does not support 223, with $|z|$ between 2.5 and 3.96: significant one at a time but not among 8,256 comparisons. They involve 117 models, mostly in the crowded lower half of the table. Conversely, Holm separates no pair that Arena shows as tied, whether a tie means overlapping score intervals (448 pairs) or overlapping rank spreads, the site's rule (830 pairs): Arena's implicit bar $1.96\,\rho_{ij}$ lies between 2.1 and 3.4, always below 3.96. A max-$|z|$ test using the exact correlations of the 8,256 statistics would need a bar of 4.30 instead of 4.52, and its step-down version \citep{romano2005exact} separates only 18 more pairs than Holm, so Holm captures most of what a family-wise procedure can gain here.
+\paragraph{The real 2024 board.} Holm keeps each of the top three models at a single rank, as Arena does, whereas Bonferroni ties the top two (\cref{fig:real} in Appendix~\ref{app:q2}). The mean width over all 129 models is 7.9 ranks for Arena, 11.4 for Holm and 13.8 for Bonferroni. Of the 7,808 orderings Arena declares, Holm does not support 223, whose $|z|$ lie between 2.5 and 3.96: each is significant on its own, but none survives the correction for 8,256 comparisons. They involve 117 models, mostly in the crowded lower half of the table. Conversely, Holm separates none of the 448 pairs whose rating intervals overlap; this follows because Arena's implicit critical value $1.96\,\rho_{ij}$ is at most 3.4, below Holm's 3.96. Holm's rank intervals also separate none of the 830 pairs whose rank spreads overlap, which is the site's notion of a tie; this is an empirical finding for this board.
 
-\subsection{Q3: category specialties are real, but their number is uncertain}\label{sec:q3}
+\subsection{Q3: Category specialties}\label{sec:q3}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig4_q3.pdf}
-\caption{Q3. (a) Standardized specialty statistics $z^*$ of the 958 tested pairs on the 2024 board against the null $N(0,1)$; dashed lines mark the Bonferroni bar. (b, c) Power of the global tests for many ($\vartheta = 0.3$) and few ($\vartheta = 0.7$) planted specialties, 200 replicates per point; dotted line: 5\%.}\label{fig:q3}
+\caption{Q3. (a) Standardized specialty statistics $z^*$ of the 958 tested pairs on the 2024 board against the null $N(0,1)$; dashed lines mark the Bonferroni critical value. (b, c) Power of the four global tests for many ($\vartheta = 0.3$) and fewer ($\vartheta = 0.5$) planted specialties, 200 replicates per point; shaded bands are 95\% Monte Carlo intervals and the dotted line is the 5\% level.}\label{fig:q3}
 \end{figure}
 
 \begin{table}[t]
 \centering\small
-\caption{Q3 on the 2024 board: $N = 958$ tested pairs; null distribution from 500 parametric-bootstrap draws (smallest attainable $p = 1/501$).}\label{tab:q3}
-\begin{tabular}{@{}lrrr@{\hspace{2em}}lr@{}}
+\caption{Q3 on the 2024 board ($N = 958$ tested pairs). The null distribution comes from 500 parametric-bootstrap draws, so the smallest attainable $p$-value is $1/501$. Plain HC is inflated because the smallest $p$-value underflows to zero; HC$^+$ is the usable form. }\label{tab:q3}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-Global test & Observed & Null 95\% point & $p$ & Identification & Pairs flagged \\
+Test & Observed & Null 95\% point & $p$ \\
 \midrule
-HC$^+$ & 330 & 3.1 & $< 0.002$ & Bonferroni (FWER 5\%) & 275 \\
-$\chi^2$ & 21{,}210 & 1{,}028 & $< 0.002$ & BH (FDR 10\%) & 525 \\
-min-$P$ ($\max|z^*|$) & 40.3 & 4.05 & $< 0.002$ & naive $p < 0.05$ & 521 \\
-HC & $1.2 \times 10^{62}$ & 4.4 & $< 0.002$ & \quad expected by chance & 48 \\
+HC$^+$ & 330 & 3.1 & $1/501$ \\
+$\chi^2$ & 21{,}210 & 1{,}028 & $1/501$ \\
+min-$P$ ($\max|z^*|$) & 40.3 & 4.05 & $1/501$ \\
+HC & $1.2 \times 10^{62}$ & 4.4 & $1/501$ \\
 \bottomrule
 \end{tabular}
+
 \end{table}
 
-The 2024 category effects are far from the null (\cref{fig:q3}a, \cref{tab:q3}). Every global test rejects at the smallest attainable $p$-value, and Bonferroni flags 275 pairs, in every category (17--40\% of its pairs) and for 94 of the 129 models, with median size 25 rating points. The largest are language effects: \texttt{llama-3-70b-instruct} is 73 points weaker in Chinese than overall ($z^* = -40$), and all nine Qwen models are 50--84 points stronger, eight significantly. Plain HC is about $10^{62}$ because the smallest $p$-value underflows to zero and is dropped, leaving the second smallest ($2.8 \times 10^{-127}$) to dominate; HC$^+$ is the usable version.
+The 2024 category effects are far from the null (\cref{fig:q3}a, \cref{tab:q3}). Every global test rejects at the smallest attainable $p$-value. Bonferroni flags 275 pairs and BH 525 (more than the 521 with naive $p < 0.05$, because BH's cutoff $0.1 \times 525/958$ exceeds 0.05; 48 would be expected by chance), in every category (17--40\% of the pairs tested in each) and for 94 of the 129 models, with a median size of 25 rating points. The largest effects concern language: \texttt{llama-3-70b-instruct} is 73 points weaker in Chinese than overall ($z^* = -40$), and all nine Qwen models are 50--84 points stronger in Chinese than overall, eight of them significantly.
 
-Whether specialties exist is settled; how many is not. The null redraws battles independently, ignoring correlated votes (same user or session, time clusters) and BT misfit. On the real board the $z^*$ have a robust SD of 3.3 rather than 1. If the true noise were 1.5, 2 or 3 times the null's, Bonferroni would flag 149, 76 or 26 pairs instead of 275.
+The number of specialties is much less certain than their existence. The null ignores correlated votes (same user or session, clusters in time) and any misfit of the BT model, and the robust SD of the observed $z^*$ is 3.3 rather than 1 (an overstatement of the noise, since it includes the true specialties). If the true noise were 1.5, 2 or 3 times the null's, Bonferroni would flag 149, 76 or 26 pairs instead of 275.
 
-The power simulation (\cref{fig:q3}b,c) reproduces the ordering of the Rare/Weak theory, on a narrow range. With many specialties ($\vartheta = 0.3$, 122 planted) $\chi^2$ and HC$^+$ lead and min-$P$ lags (at $r = 0.2$: 1.00, 1.00, 0.57); with few ($\vartheta = 0.7$, 8 planted) plain HC leads and $\chi^2$ lags (at $r = 0.8$: HC 0.84, min-$P$ 0.74, HC$^+$ 0.72, $\chi^2$ 0.62). With $N = 958$ the separation shows only at the sparse end, well above the asymptotic detection boundaries. For identification, BH finds 76--93\% of the strongest planted specialties ($r = 1.5$, about 27 points) and Bonferroni about 53\%; between detection and recovery lies a wide region where HC can tell that specialties exist but no procedure can say which. The real board lies far from that region: its global statistics exceed their null 95\% points by one to two orders of magnitude.
+The power simulation (\cref{fig:q3}b,c) follows the qualitative ordering of the Rare/Weak theory. With many specialties ($\vartheta = 0.3$, 122 planted) at $r = 0.2$, $\chi^2$ and HC$^+$ have power 1.00 and min-$P$ only 0.57. At $\vartheta = 0.5$ (31 planted) and $r = 0.4$, HC and HC$^+$ have power 0.88 and 0.95 against 0.56 for min-$P$. With very few specialties ($\vartheta = 0.7$, 8 planted) the four tests are within about two Monte Carlo SEs of each other. (For $\vartheta < 1/2$ our parametrization keeps $\mu = \sqrt{2r\log N}$ rather than letting the signal shrink with $N$, so every test there is far above its detection boundary.) For identification, BH finds 76--93\% of the strongest planted specialties ($r = 1.5$, about 27 rating points at the median pair) and Bonferroni about 53\%; in between lies a wide region where $\chi^2$ and HC$^+$ detect specialties that no procedure can locate. The real board is far from that region, with global statistics one to two orders of magnitude above their null 95\% points.
 
 %====================================================================
 \section{Discussion}\label{sec:discussion}
 
-\paragraph{Summary.} Arena's rank spreads are built from uncorrected per-model intervals, in 2024 and today. In a simulation on Arena's real comparison graph they hold simultaneously in 91\% of datasets, close to 95\% only because two errors cancel, and they fail badly when models are exactly tied. Every correction we tried restores simultaneous coverage; pairwise $z$-tests with Holm's step-down are the cheapest, and the gap they leave to the oracle is mostly the price of guarding against exact ties that the 2024 board does not have. Category specialties are real and common, but their number depends on how the null's noise is calibrated.
+Arena's rank spreads hold simultaneously in 91\% of simulated datasets because two effects offset each other, and they fail badly when models are tied. Every correction we tried restores simultaneous coverage; Holm is the narrowest of those we simulated, and its extra width relative to the oracle buys protection against exact ties. Category specialties are widespread, although their number depends on the null's noise level.
 
-\paragraph{What the comparison teaches.} First, the object that needs a multiplicity guarantee is the set of declared orderings, not the score vector (\cref{lem:orderings}); the $\chi^2$ set spends most of its width on directions that cannot change a ranking. Second, the overlap rule hides a test at $|z| > 1.96\,\rho_{ij}$ with $\rho_{ij} \approx 1.4$, which is why Arena's uncorrected spreads are nearly valid and why no correction can resolve the ties Arena reports. Third, the error rate of any pairwise procedure is governed by the number of nearly tied pairs, not by $K$; a family-wise bound must assume the worst case and pays for 8,256 comparisons when a few hundred pairs are at risk. Resampling the joint law of the $z_{ij}$ \citep{romano2005exact, mogstad2024inference} adds little over Holm here; a procedure that adapts to the number of near-ties would gain more.
+\paragraph{Interpretation.} Three points go beyond this data set. First, the object that needs a multiplicity guarantee is the set of declared orderings, not the vector of strengths (\cref{lem:orderings}); the $\chi^2$ set spends most of its width on directions that cannot change a ranking. Second, the overlap rule hides a test at $|z| > 1.96\,\rho_{ij}$ with $\rho_{ij}$ near 1.4. This explains why Arena's uncorrected spreads are nearly valid, and why none of the family-wise corrections we studied separates a pair that Arena reports as tied. Third, the error rate of a pairwise procedure is roughly the number of nearly tied pairs times the tail beyond the critical value they face, which falls only as well-separated pairs are rejected; tiers of tied models among well-separated ones are therefore the worst case. Resampling the joint distribution of the $z_{ij}$ \citep{romano2005exact, mogstad2024inference} or using the logical constraints among pairwise hypotheses \citep{shaffer1986modified} can only lower Holm's critical values; on the real board the first adds just 18 orderings. A procedure that adapts to the number of near-ties would gain more.
 
-\paragraph{Recommendation.} If Arena wants its rank spreads to mean ``the true ranks are inside, jointly, with 95\% probability'', pairwise tests with Holm are a simple replacement. They need only the covariance that \texttt{arena-rank} already computes, they widen the 2024 rank spreads by 3.5 ranks on average, and they keep the top three models at single ranks. A site that prefers per-model statements should label its spreads as such.
+\paragraph{Recommendation.} If Arena wants its rank spreads to mean that the true ranks lie inside jointly with 95\% probability, pairwise tests with Holm are a simple replacement. They need only the covariance matrix that \texttt{arena-rank} already computes, they widen the 2024 rank spreads by 3.5 ranks on average, and they keep the top three models at single ranks. If the current spreads are kept, the site should state that they are not joint statements and that each one holds with well over 95\% probability on its own.
 
-\paragraph{Limitations and future work.} The simulation is idealized: independent battles, an exact BT model, fixed strengths and one tie rate; correlated votes or drift would likely lower real coverage. It uses one world of 129 models with 2024 strengths, and the stress tests change the strengths but not the graph or the number of models. Today's board has about 400 models, where Bonferroni intervals need $z = 3.84$ and pairwise Bonferroni $z = 4.98$. The truth $\beta^*$ is itself an estimate, slightly more spread out than the real strengths. All guarantees rely on the normal approximation, weakest for models with few battles, and the two-sided Holm's directional control rests on simulation. Q3's null assumes fixed BT strengths, so anything else that varies by category, such as drift combined with a changing category mix, also counts as a specialty. Natural next steps are a bootstrap over users or days to calibrate Q3's noise level and Q1's coverage under correlated votes; synthetic worlds with 200--400 models; and, for Q3, removing a low-rank ``general ability'' component before testing.
-
+\paragraph{Limitations and future work.} The simulation assumes independent battles, an exact BT model, fixed strengths and one tie rate; correlated votes or drifting strengths would likely lower real coverage. It uses one world of 129 models with 2024 strengths, whereas today's board has about 400 models (Bonferroni intervals would need $z = 3.84$, pairwise Bonferroni $z = 4.98$). All guarantees rely on the normal approximation, and Holm's directional control rests on simulation. Q3's null ignores correlated votes and anything else that varies by category, such as drift combined with a changing category mix. A bootstrap over users or days would calibrate Q3's noise level and Q1's coverage under correlated votes, and synthetic worlds with 200--400 models would show how the conclusions scale. Appendix~\ref{app:limits} lists further limitations and the parts of the proposal we did not carry out.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -219,33 +215,33 @@ The power simulation (\cref{fig:q3}b,c) reproduces the ordering of the Rare/Weak
 
 \subsection{Implementation details and reproducibility}\label{app:impl}
 
-\paragraph{Code and data.} All code, results and figures are at \url{https://github.com/chenxige0509/stat236-arena-uncertainty}. The README lists one command per step; each script states its inputs, outputs and the numbers it establishes. The battle dump is not in the repository (2.1 GB) and is converted to Parquet by \texttt{prepare\_data.py}; the official snapshot is downloaded automatically and read with an allow-list unpickler.
+\paragraph{Code and data.} All code, results and figures are at \url{https://github.com/chenxige0509/stat236-arena-uncertainty}. The README lists one command per step, and each script states its inputs, outputs and the numbers it establishes. The battle dump (2.1 GB) is not in the repository; \texttt{prepare\_data.py} converts it to Parquet. The official snapshot is downloaded automatically and read with an allow-list unpickler.
 
-\paragraph{Estimator.} We use \texttt{arena-rank} 0.1.1 with its defaults: \texttt{BradleyTerry} minimizes \eqref{eq:loss} by L-BFGS from zero (maximum 1,000 iterations, tolerances $10^{-9}$), the Hessian has a ridge of $10^{-5}$ times the number of battles on its diagonal, which identifies the shift, and the intervals use the sandwich covariance with $z = 1.96$. The package returns only the diagonal of $\hat V$; we recompute the full matrix from the same Hessian and gradient covariance. Other software: Python 3.12--3.13, JAX 0.8.1, NumPy 2.3.3, pandas 3.0.6, SciPy 1.18.1, statsmodels 0.15.0.
+\paragraph{Estimator.} We use \texttt{arena-rank} 0.1.1 with its defaults. \texttt{BradleyTerry} minimizes \eqref{eq:loss} by L-BFGS from zero (at most 1,000 iterations, tolerances $10^{-9}$). The Hessian has a ridge of $10^{-5}$ times the number of battles on its diagonal, which also fixes the location of the strengths, and the intervals use the sandwich covariance with $z = 1.96$. The package returns only the diagonal of $\hat V$; we recompute the full matrix from the same Hessian and gradient covariance. Other software: Python 3.12--3.13, JAX 0.8.1, NumPy 2.3.3, pandas 3.0.6, SciPy 1.18.1, statsmodels 0.15.0.
 
-\paragraph{Simulation.} Each simulated dataset is drawn as multinomial win/tie/loss counts per pair (equivalent to drawing the 1.66 million battles individually) and stored in a fixed-shape array, so the BT fit compiles once; one fit takes about 0.2 seconds. A test (\texttt{test\_simulate.py}) checks that this format reproduces \texttt{arena-rank}'s own data loader to $10^{-9}$ and that simulated estimates are unbiased. Q1 and Q2 use seed 0 and the same draws; \texttt{q2.py} asserts that its Arena rank spreads are identical to those of Q1. The pairwise procedures work on $|z|$ and normal quantiles rather than $p$-values, because thousands of $p$-values underflow; \texttt{test\_pairwise.py} checks them against \texttt{statsmodels} on 200 random correlated problems. Runtimes on a laptop: Q1 3 minutes, Q2 4 minutes per world, Q3's calibration 2 minutes, Q3's power grid 35 minutes.
+\paragraph{Simulation.} Each dataset is drawn as multinomial win/tie/loss counts per pair, which is equivalent to drawing the 1.66 million battles one by one, and stored in a fixed-shape array, so the BT fit compiles once and one fit takes about 0.2 seconds. The tie probability is capped at $2\min(p, 1-p)$ so that the probabilities stay valid; the cap binds only for rating gaps above about 270 points and keeps $\mathbb E[y] = p$. A test (\texttt{test\_simulate.py}) checks that this format reproduces \texttt{arena-rank}'s own data loader to $10^{-9}$ and that simulated estimates are unbiased. Q1 and Q2 use seed 0 and identical draws, and \texttt{q2.py} asserts that its Arena rank spreads equal those of Q1. Each Monte Carlo SE is the standard deviation of the per-dataset quantity divided by $\sqrt{1000}$ (for a proportion $\hat\pi$, $\sqrt{\hat\pi(1-\hat\pi)/1000}$). The oracle grid has step 0.05 from 1.8 to 4.0, plus 1.96 and 3.548. The pairwise procedures work on $|z|$ and normal quantiles rather than $p$-values, because thousands of $p$-values underflow; \texttt{test\_pairwise.py} checks them against \texttt{statsmodels} on 200 random correlated problems. Q3 uses seed 0 for the 500 null draws and seed 1 for the power grid, whose critical values and size come from two further sets of 400 fresh null draws. A planted specialty $\delta_{mc}$ shifts model $m$'s strength in every battle of category $c$ by $\mu\sqrt{\mathrm{Var}_{mc}}/I_{mc}$, where $I_{mc} = \sum p(1-p)$ and $\mathrm{Var}_{mc} = \sum[p(1-p) - t/4]$ over the pair's battles; after the refit the realized mean $|z^*|$ is about $0.91\mu$. Runtimes on a laptop (Apple silicon): Q1 3 minutes, Q2 4 minutes per world, Q3's calibration 2 minutes, Q3's power grid 35 minutes.
 
-\subsection{Step 0 details}\label{app:step0}
+\subsection{Validation details}\label{app:step0}
 
 \begin{table}[h]
 \centering\small
-\caption{Step 0: checks of our implementation against Arena's published numbers.}\label{tab:step0}
-\begin{tabular}{@{}p{0.33\textwidth}p{0.6\textwidth}@{}}
+\caption{Checks of our implementation against Arena's published numbers.}\label{tab:step0}
+\begin{tabular}{@{}p{0.31\textwidth}p{0.62\textwidth}@{}}
 \toprule
 Check & Result \\
 \midrule
-2024 battles per model & 91 of 128 models within $\pm$10 battles; recent models miss 1--2k battles absent from the public dump \\
-2024 ratings & median $|$difference$|$ 0.06 points; at most 0.3 for models whose battle counts match \\
+2024 battles per model & 91 of 128 models within $\pm$10 battles; recent models miss 1,000--2,000 battles absent from the public dump \\
+2024 ratings & median absolute difference 0.06 points; at most 0.3 for models whose battle counts match \\
 2024 intervals & identical to the bootstrap quantiles; half-width / SD = 1.90 (per-model level: 1.88; Bonferroni: 3.55; $\chi^2$: 12.42) \\
-2026 intervals (4,773 boards) & half-width / $\sqrt{\text{variance}}$ = 1.9600 for all 1.5M model rows (Bonferroni would need 2.24--3.85) \\
+2026 intervals (4,773 snapshots) & half-width / $\sqrt{\text{variance}}$ = 1.9600 for all 1.5 million model rows (Bonferroni would need 2.24--3.85) \\
 2026 rank spreads & formula \eqref{eq:spread} reproduces both ends for 59 of 59 models \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{2024.} (1) With the official filter, 30 models match the official battle count exactly and 91 of 128 within $\pm$10; without the de-duplication filter no model matches within $\pm$10. Recent models miss 1--2k battles that the public dump omits. (2) After shifting our ratings so that \texttt{mixtral-8x7b-instruct-v0.1} has the board's anchor value 1114, the median absolute difference is 0.06 points (correlation 0.99999) and at most 0.3 for models whose battle counts match. (3) The published intervals equal the 2.5\% and 97.5\% quantiles of the 100 stored bootstrap fits exactly; their half-width is 1.90 bootstrap SDs (median), against 1.88 expected for a per-model 95\% interval estimated from 100 normal draws. Our sandwich SE is 0.98 times the bootstrap SD (median), so the current sandwich intervals and the 2024 bootstrap intervals have the same width. (4) The published rank equals $1 + \#\{m' : L_{m'} > U_m\}$ up to a constant offset of 5 for 112 models (0--4 for the top 16), consistent with the board having been ranked while five unreleased models were listed. Our fit has 129 models, one more than the board, because the dump contains one of the board's hidden pre-release models.
+\textbf{2024.} (1) With the official filter, 30 models match the official battle count exactly and 91 of 128 within $\pm$10; without the de-duplication filter no model matches within $\pm$10. (2) After shifting our ratings so that \texttt{mixtral-8x7b-instruct-v0.1} has the board's anchor value 1114, the median absolute difference is 0.06 points (correlation 0.99999). (3) The published intervals equal the 2.5\% and 97.5\% quantiles of the 100 stored bootstrap fits exactly; their half-width is 1.90 bootstrap SDs (median), against 1.88 expected for a per-model 95\% interval estimated from 100 normal draws. Our sandwich SE is 0.98 times the bootstrap SD (median), so the current sandwich intervals and the 2024 bootstrap intervals have the same width. (4) The published rank equals $1 + \#\{m' : L_{m'} > U_m\}$ up to a constant offset of 5 for 112 models (0--4 for the top 16), consistent with the board having been ranked while five unreleased models were listed. Our fit has 129 models, one more than the board, because the dump contains one of the board's hidden pre-release models.
 
-\textbf{2026.} The site's default text view matches the style-controlled board of \texttt{leaderboard-dataset}: on 2026-10-08 all 59 recorded scores agree to rounding (at most 0.50), as do all $\pm$ values and vote counts, while the board without style control differs by up to 54 points. On all 4,773 published 2026 text boards (1.5 million model rows) the ratio of half-width to $\sqrt{\text{variance}}$ is 1.9600 to four decimals. A Bonferroni or $\chi^2$ correction would need 2.24--3.85 or 2.0--21.6 depending on the board's size. Only the text boards and a single site view were checked.
+\textbf{2026.} The site's default text view is the style-controlled board in the \texttt{leaderboard-dataset} release: on 2026-10-08 all 59 recorded scores agree with it to rounding (at most 0.50), as do all $\pm$ values and vote counts, while the board without style control differs by up to 54 points. On all 4,773 text-board snapshots published in 2026 (as downloaded on 2026-10-28; the dataset keeps growing), the ratio of half-width to $\sqrt{\text{variance}}$ is 1.9600 to four decimals. A Bonferroni or $\chi^2$ correction would need 2.24--3.85 or 2.0--21.6 depending on the board's size. Only the text boards and one site view were checked.
 
 \subsection{Q1: supplementary results}\label{app:q1}
 
@@ -265,12 +261,12 @@ True rank & Battles & SE & Models within 10 points & Rank exactly right & Spread
 \end{tabular}
 \end{table}
 
-Among the 103 rank spreads that missed in the simulation, 47\% made the model look worse than it is (best rank below the true rank) and 53\% made it look better. Using the site's tie rule (rank spreads that do not overlap), a false ordering appeared in 0.6\% of datasets and 90.0\% of true orderings were found; counting every ordering the interval rule declares, a false ordering appeared in 15.5\% of datasets. Spearman correlations with the spread width across the 129 models: crowding (models within 10 points) 0.79, standard error 0.27, true rank 0.23, era of the model $-0.18$, number of distinct opponents 0.04. In an OLS regression of the width on standardized drivers that includes crowding, the standard error has coefficient 2.62 ($t = 8.9$) and the true rank 0.29 ($t = 1.1$). These analyses are correlational, and the drivers are related to each other (older models are weaker and have fewer battles).
+Of the 103 rank spreads that failed in the simulation, 47\% made the model look worse than it is (best rank numerically larger than the true rank) and 53\% made it look better. Counting only orderings whose rank spreads do not overlap, the site's tie rule, a false ordering appeared in 0.6\% of datasets and 90.0\% of the true orderings were found; counting every ordering the interval rule declares, a false ordering appeared in 15.5\% of datasets. When all strengths are scaled down, Arena's probability of a false ordering rises to 29.5\%, 44.3\% and 64.4\% at scales 0.5, 0.25 and 0.1 while its simultaneous rank coverage stays near 91\%, an illustration of \cref{lem:orderings}: most false orderings involve pairs whose rank spreads still overlap. Spearman correlations with the spread width across the 129 models are 0.79 for crowding, 0.27 for the standard error, 0.23 for the true rank, $-0.18$ for the model's release date and 0.04 for the number of distinct opponents. In an OLS regression of the width on standardized drivers that includes crowding, the standard error has coefficient 2.62 ($t = 8.9$) and the true rank 0.29 ($t = 1.1$). These analyses are correlational, and the drivers are related to each other (older models are weaker and have fewer battles).
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.82\textwidth]{../docs/figures/q1_spreads.png}
-\caption{Mean rank spread of each model over the 1,000 simulated datasets, against its true rank.}\label{fig:q1spreads}
+\includegraphics[width=\textwidth]{figures/figA1_q1_spreads.pdf}
+\caption{Mean rank spread of each model over the 1,000 simulated datasets, against its true rank. Triangles mark the three models whose rank spread contains the true rank in fewer than 99.5\% of datasets.}\label{fig:q1spreads}
 \end{figure}
 
 \subsection{Q2: supplementary results}\label{app:q2}
@@ -289,51 +285,59 @@ Bonferroni & 1.000 & 1.000 & 13.65 & 0 & 0 & 0.901 \\
 $\chi^2$ projection & 1.000 & 1.000 & 43.43 & 0 & 0 & 0.669 \\
 $\chi^2$ Scheff\'e & 1.000 & 1.000 & 33.07 & 0 & 0 & 0.749 \\
 Pairwise Bonferroni & 1.000 & 1.000 & 12.73 & 0 & 0 & 0.908 \\
-Holm (one-sided) & 1.000 & 1.000 & 12.38 & 0 & 0 & 0.911 \\
-Holm (two-sided) & 1.000 & 1.000 & 11.25 & 0 & 0 & 0.920 \\
+One-sided Holm & 1.000 & 1.000 & 12.38 & 0 & 0 & 0.911 \\
+Holm & 1.000 & 1.000 & 11.25 & 0 & 0 & 0.920 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Bonferroni's score intervals all cover in $94.5\% \pm 0.7\%$ of datasets, so the union bound is nearly tight for scores; it is the step from scores to ranks that makes Bonferroni conservative.
+Bonferroni's rating intervals all cover in 94.5\% of datasets (Monte Carlo SE 0.7\%), so the union bound is nearly tight for the ratings; it is the step from ratings to ranks that makes Bonferroni conservative.
 
 \begin{table}[h]
 \centering\small
-\caption{Simultaneous coverage of the rank intervals in the stress-test worlds (1,000 datasets each). Monte Carlo SEs are at most 0.016 (Arena) and 0.006 (others).}\label{tab:stress}
+\caption{Simultaneous coverage of the rank intervals in the stress-test worlds (1,000 datasets each). Monte Carlo SEs are at most 0.016 for Arena and 0.006 for the others.}\label{tab:stress}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-World & Arena & Bonferroni & Pairwise Bonf. & Holm (1-sided) & Holm \\
+World & Arena & Bonferroni & Pairwise Bonf. & One-sided Holm & Holm \\
 \midrule
 2024 strengths & 0.909 & 1.000 & 1.000 & 1.000 & 1.000 \\
-strengths $\times$ 0.5 & 0.901 & 1.000 & 1.000 & 1.000 & 1.000 \\
-strengths $\times$ 0.25 & 0.914 & 1.000 & 1.000 & 1.000 & 1.000 \\
-strengths $\times$ 0.1 & 0.915 & 1.000 & 1.000 & 1.000 & 1.000 \\
+Strengths $\times$ 0.5 & 0.901 & 1.000 & 1.000 & 1.000 & 1.000 \\
+Strengths $\times$ 0.25 & 0.914 & 1.000 & 1.000 & 1.000 & 1.000 \\
+Strengths $\times$ 0.1 & 0.915 & 1.000 & 1.000 & 1.000 & 1.000 \\
 20 tiers, exactly tied & 0.241 & 1.000 & 0.998 & 0.996 & 0.975 \\
 10 tiers, exactly tied & 0.073 & 0.999 & 0.998 & 0.995 & 0.966 \\
 20 tiers, spread 5\% & 0.668 & 1.000 & 0.999 & 0.999 & 0.994 \\
 20 tiers, spread 10\% & 0.703 & 1.000 & 1.000 & 1.000 & 0.998 \\
 20 tiers, spread 20\% & 0.782 & 1.000 & 1.000 & 1.000 & 1.000 \\
-all models tied & 0.002 & 0.984 & 0.973 & 0.973 & 0.973 \\
+All models tied & 0.002 & 0.984 & 0.973 & 0.973 & 0.973 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Uniformly scaled-down strengths are not a hard case: the gaps shrink, but so does the number of declared orderings, and few pairs end up close enough to be at risk. A true gap of one standard error makes a wrong-direction rejection at a bar near 4 about 100 times less likely than for a tied pair.
+Uniformly scaled-down strengths are not a hard case for the corrections: the gaps shrink, but so does the number of declared orderings, and few pairs end up close enough to be at risk. At a critical value near 4, a true gap of one standard error makes a wrong-direction declaration 100--200 times less likely than for an exactly tied pair.
 
-\paragraph{Real board, pair by pair.} Of the 8,256 pairs, Arena's interval rule orders 7,808 and Holm 7,585, all of which Arena also orders. Under the site's rule (rank spreads that overlap count as tied), Arena separates 7,426 pairs; for 428 of them the Holm rank intervals overlap, and none of the 830 pairs Arena shows as tied has separate Holm intervals. Holm agrees with every ordering of Bonferroni's intervals and adds 155. A single-step max-$|z|$ test, with the bar set to the 95th percentile of $\max_{i<j} |Z_i - Z_j| / \SE(\cdot)$ for $Z \sim N(0, \hat V)$ (20,000 draws), separates 7,534 pairs; its step-down version \citep{romano2005exact} stops at a bar of 3.86 and separates 7,603.
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.84\textwidth]{figures/fig3_q2_real.pdf}
+\caption{Rank intervals of the 20 highest-rated models on the 2024 board (our refit of the public battles) under Arena's method, Bonferroni intervals and Holm. Each model has one bar per procedure, offset vertically.}\label{fig:real}
+\end{figure}
+
+Declared orderings of the pairwise procedures are transitive: each procedure declares exactly the pairs whose $|z|$ exceeds some cutoff, and because $\SE(\hat r_i - \hat r_k) \le \SE(\hat r_i - \hat r_j) + \SE(\hat r_j - \hat r_k)$, declaring $i > j$ and $j > k$ implies $z_{ik} \ge \min(z_{ij}, z_{jk})$. The rank intervals therefore come from a proper partial order, and \texttt{q2.py} checks this in every dataset.
+
+\paragraph{The real board, pair by pair.} Of the 8,256 pairs, Arena's interval rule orders 7,808 and Holm 7,585, all of which Arena also orders. Under the site's tie rule, Arena separates 7,426 pairs; for 428 of them the Holm rank intervals overlap, and none of the 830 pairs whose rank spreads overlap has separate Holm rank intervals. Holm declares every ordering that Bonferroni's intervals declare, and 155 more. A single-step maximum-$|z|$ test, with its critical value set to the 95th percentile of $\max_{i<j} |Z_i - Z_j| / \SE(\hat r_i - \hat r_j)$ for $Z \sim N(0, \hat V)$ (20,000 draws), needs 4.30 instead of 4.52 and separates 7,534 pairs; its step-down version \citep{romano2005exact} stops at 3.86 and separates 7,603, 18 more than Holm.
 
 \subsection{Q3: supplementary results}\label{app:q3}
 
 \begin{table}[h]
 \centering\small
-\caption{Q3 categories. Agreement with the official 2024 category boards (128 models) and the pairs tested here.}\label{tab:cats}
+\caption{Q3 categories. ``Within $\pm$10'': models (of 128) whose battle count in the category is within 10 of the official category board's. ``Tested'': pairs with at least 200 category battles.}\label{tab:cats}
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
 Category & Battle belongs when & Battles & Within $\pm$10 & Tested & Bonferroni \\
 \midrule
 Coding & code detected & 316,372 & 98 & 128 & 35 \\
 Math & math tag & 214,348 & 98 & 126 & 40 \\
-Instruction following & IF tag (score $\ge 4$) & 581,492 & 97 & 129 & 42 \\
+Instruction following & instruction-following tag & 581,492 & 97 & 129 & 42 \\
 Hard prompts & $\ge 6$ of 7 criteria tags & 447,819 & 98 & 129 & 39 \\
 Chinese & language & 176,016 & 100 & 115 & 46 \\
 Russian & language & 143,973 & 99 & 95 & 32 \\
@@ -343,12 +347,22 @@ Long query & $\ge 500$ user tokens & 164,230 & 99 & 108 & 19 \\
 \end{tabular}
 \end{table}
 
-For the tested pairs, our category-minus-overall ratings have correlation at least 0.999 with the official ones. Below 200 battles a few old models disagree with the official category boards by up to 408 points; the official values look like a non-converged fit (three Russian models share an identical rating), which is one reason for the 200-battle minimum. The sizes of the global tests under the null, estimated from fresh draws, are 0.06 (HC), 0.05 (HC$^+$), 0.05 (min-$P$) and 0.08 ($\chi^2$). In the power simulation BH's false discovery proportion ranges from 0.01 to 0.12 across the grid, often well below 10\%, and Bonferroni's probability of any false discovery is 6.5\% with no specialties and at most 9\% on the grid, a little above 5\%, probably because each null SD is estimated from 500 draws. Categories overlap (many coding battles are also hard prompts), so a specialty planted in one category also moves the model in overlapping categories; such discoveries (1--23\%) are counted separately as spillovers, not as false.
+For the tested pairs, our category-minus-overall ratings have correlation at least 0.999 with the official ones. Below 200 battles a few old models disagree with the official category boards by up to 408 points; the official values look like a non-converged fit (three Russian models share an identical rating), which is one reason for the 200-battle minimum. The null 95\% points in \cref{tab:q3} use the same 500 draws that set the standardization; with leave-one-out standardization they are 1,036 for $\chi^2$ and 4.12 for $\max|z^*|$, and no $p$-value changes. The sizes of the global tests under the null, from fresh draws, are 0.06 (HC), 0.05 (HC$^+$), 0.05 (min-$P$) and 0.08 for $\chi^2$, about 2.4 Monte Carlo SEs above 5\%. In the power simulation BH's false discovery proportion ranges from 0.01 to 0.12 across the grid, often well below 10\%, and Bonferroni's probability of any false discovery is 6.5\% with no specialties and at most 9\% across the 30 cells, consistent with 5\% at a Monte Carlo SE of about 0.02. Categories overlap (many coding battles are also hard prompts), so a specialty planted in one category also moves the model in overlapping categories; such discoveries (1--23\% of all discoveries) are counted as spillovers, not as false.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.66\textwidth]{../docs/figures/q3_specialties.png}
+\includegraphics[width=0.92\textwidth]{figures/figA2_q3_specialties.pdf}
 \caption{Estimated specialties (category rating minus overall rating, centered within the category) of the 40 highest-rated models; dots mark pairs that pass Bonferroni.}\label{fig:q3map}
 \end{figure}
+
+\subsection{Further limitations and deviations from the proposal}\label{app:limits}
+
+\begin{itemize}
+\item The truth $\beta^*$ is itself an estimate and is slightly more spread out than the real strengths, which makes ranking a little easier in the simulation than in reality. The stress tests change the strengths but not the comparison graph or the number of models.
+\item The normal approximation is weakest for models with few battles; the smallest model in the 2024 data has 1,193 battles.
+\item In Q3 the overall fit absorbs part of each specialty, most in the largest categories (median null SD 0.81 for instruction following, which contains 35\% of battles, against 0.95 for Chinese); an overall fit that leaves the category out would avoid this. An empirical null \citep{efron2004large} would be a principled alternative to the bootstrap null.
+\item BH's FDR guarantee assumes positive dependence, which the $z^*$ need not satisfy; the simulated false discovery proportions (at most 12\%) are our evidence that it holds approximately.
+\item Not carried out from the proposal: bootstrap rank intervals as a marginal benchmark; BH on the pairwise tests; fully synthetic worlds with other comparison graphs and numbers of models; and a low-rank-plus-sparse decomposition that removes a general-ability component before testing for specialties. We also replaced the proposal's 2025 data sample by the 2024 dump, for the answer key described in \cref{sec:data}.
+\end{itemize}
 
 \end{document}

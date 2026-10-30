@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How Certain Is the Chatbot Arena Leaderboard?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="STAT 236 project: how reliable are Chatbot Arena's rank spreads, which corrections fix them, and are category specialties real?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* Layout: a leaderboard you can interrogate. One reading column (about 68ch) with wide figure bands that break out
+   of it; every chart is drawn from the committed results. Display: Schibsted Grotesk; body: Source Serif 4;
+   ranks, ratings and counts: JetBrains Mono. Series colors are the report's: Arena blue, Bonferroni orange, Holm aqua. */
+:root {
+  --paper: #f5f6f8; --surface: #ffffff; --ink: #121722; --ink-2: #485064; --muted: #7a8295;
+  --rule: #dde1e8; --track: #eaedf2; --chip: #e8ecf3;
+  --arena: #2a78d6; --bonf: #eb6834; --holm: #1baf7a; --neutral: #a3a9b5;
+  --hit: #c8d1df; --miss: #e34948; --neg: #2a78d6; --pos: #e34948; --mid: #eef0f3;
+  --display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --col: 68ch; --wide: 1080px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0f131b; --surface: #161c27; --ink: #e9edf4; --ink-2: #b3bbca; --muted: #8590a4;
+  --rule: #283143; --track: #1f2736; --chip: #232c3c;
+  --arena: #3987e5; --bonf: #d95926; --holm: #199e70; --neutral: #687286;
+  --hit: #334059; --miss: #e66767; --neg: #3987e5; --pos: #e66767; --mid: #1f2533; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #0f131b; --surface: #161c27; --ink: #e9edf4; --ink-2: #b3bbca; --muted: #8590a4;
+  --rule: #283143; --track: #1f2736; --chip: #232c3c;
+  --arena: #3987e5; --bonf: #d95926; --holm: #199e70; --neutral: #687286;
+  --hit: #334059; --miss: #e66767; --neg: #3987e5; --pos: #e66767; --mid: #1f2533; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 0.18em; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--arena); outline-offset: 2px; border-radius: 3px; }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: var(--wide); margin: 0 auto; }
+.col { max-width: var(--col); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-weight: 800; font-size: clamp(2.1rem, 5.4vw, 3.6rem); line-height: 1.04; letter-spacing: -0.025em; }
+h2 { font-weight: 700; font-size: clamp(1.55rem, 3vw, 2.1rem); line-height: 1.15; }
+h3 { font-weight: 700; font-size: 1.05rem; line-height: 1.3; }
+p { margin: 0; }
+.eyebrow { font-family: var(--display); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.2rem; line-height: 1.55; color: var(--ink-2); }
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.small { font-size: 0.9rem; color: var(--ink-2); }
+.cap { font-family: var(--display); font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+
+/* top bar */
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem 1.5rem;
+  padding-block: 1.1rem; border-bottom: 1px solid var(--rule); font-family: var(--display); font-size: 0.88rem; color: var(--ink-2); }
+.top nav { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+.top strong { color: var(--ink); font-weight: 700; }
+
+section { padding-block: clamp(2.5rem, 6vw, 4.5rem); border-bottom: 1px solid var(--rule); }
+section:last-of-type { border-bottom: 0; }
+.sec-head { display: grid; gap: 0.7rem; margin-bottom: 1.6rem; }
+
+/* hero */
+.hero { padding-top: clamp(2rem, 5vw, 3.5rem); }
+.hero-grid { display: grid; gap: 1.4rem; }
+.hero-top { display: grid; gap: 1.6rem 3rem; align-items: end; }
+@media (min-width: 960px) { .hero-top { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
+.glance { display: grid; gap: 0.9rem; border-left: 2px solid var(--ink); padding-left: 1.2rem; align-content: end; }
+.glance .g { display: grid; gap: 0.1rem; }
+@media (min-width: 600px) and (max-width: 959px) { .glance { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem;
+  border-left: 0; padding-left: 0; border-top: 2px solid var(--ink); padding-top: 0.9rem; } .glance .g { align-content: start; } }
+.glance .gv { font: 600 1.45rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.glance .gq { font: 700 0.72rem var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.glance .gk { font-family: var(--display); font-size: 0.86rem; color: var(--ink-2); line-height: 1.35; }
+.hero h1 .q { color: var(--muted); font-weight: 700; }
+.spread-tag { white-space: nowrap; font-family: var(--mono); font-weight: 600; background: var(--chip); padding: 0.05em 0.35em; border-radius: 4px; }
+
+/* segmented control */
+.seg { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.seg button { font: 600 0.88rem/1 var(--display); color: var(--ink-2); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.45rem; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.seg button .sw { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--c, var(--neutral)); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.seg button:hover { border-color: var(--ink-2); }
+
+/* leaderboard */
+.board-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1rem 0.8rem; }
+.board-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.8rem 1.4rem;
+  padding-block: 0.4rem 0.9rem; border-bottom: 1px solid var(--rule); margin-bottom: 0.4rem; }
+.metric { display: grid; gap: 0.1rem; align-content: start; }
+.board-meta { grid-template-rows: auto auto auto; }
+.board-meta .metric { grid-row: span 3; grid-template-rows: subgrid; }
+.metric .k { font: 600 0.72rem/1.2 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.metric .v { font: 600 1.35rem/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.metric .d { font-family: var(--display); font-size: 0.78rem; color: var(--ink-2); }
+.proc-note { font-family: var(--display); font-size: 0.9rem; color: var(--ink-2); min-height: 2.6em; padding-top: 0.6rem; }
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 4.2rem minmax(0, 15rem) 5.6rem minmax(0, 1fr); align-items: center;
+  gap: 0.75rem; padding-block: 0.28rem; border-bottom: 1px solid var(--track); }
+.row:last-child { border-bottom: 0; }
+.row .rk { font: 600 0.92rem var(--mono); font-variant-numeric: tabular-nums; }
+.row .nm { font: 500 0.92rem var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sc { font: 400 0.8rem var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.trk { position: relative; height: 0.9rem; background: var(--track); border-radius: 999px; }
+.bar { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--c, var(--arena));
+  transition: left 0.45s cubic-bezier(.2,.7,.2,1), width 0.45s cubic-bezier(.2,.7,.2,1), background 0.3s; }
+.axis { display: grid; grid-template-columns: 4.2rem minmax(0, 15rem) 5.6rem minmax(0, 1fr); gap: 0.75rem;
+  font: 400 0.72rem var(--mono); color: var(--muted); padding-bottom: 0.3rem; }
+.axis .ticks { position: relative; height: 1.1rem; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+.axis .lbl { font-family: var(--display); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.66rem; }
+.board-foot { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; justify-content: space-between; align-items: center; padding-top: 0.8rem; }
+.linkbtn { font: 600 0.86rem var(--display); background: none; border: 0; color: var(--ink); text-decoration: underline;
+  text-underline-offset: 0.2em; text-decoration-color: var(--muted); cursor: pointer; padding: 0; }
+button.row { width: 100%; font: inherit; color: inherit; text-align: left; background: none; border: 0;
+  border-bottom: 1px solid var(--track); cursor: pointer; border-radius: 0; }
+button.row:hover { background: var(--paper); }
+button.row[aria-expanded="true"] { background: var(--paper); border-bottom-color: transparent; }
+button.row[aria-expanded="true"] .nm { font-weight: 700; }
+button.row:focus-visible { outline-offset: -2px; }
+.cmp { background: var(--paper); border-bottom: 1px solid var(--track); padding: 0.2rem 0 0.55rem; }
+.cmp .row { border-bottom: 0; padding-block: 0.16rem; }
+.cmp .row .nm { font-size: 0.82rem; color: var(--ink-2); display: inline-flex; align-items: center; gap: 0.4rem; }
+.cmp .row .nm i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--c); flex: none; }
+.cmp .row .rk { font-size: 0.82rem; color: var(--ink-2); }
+.cmp .row.on .nm, .cmp .row.on .rk { color: var(--ink); font-weight: 700; }
+.cmp .trk { height: 0.6rem; }
+.cmp .hint { font-family: var(--display); font-size: 0.78rem; color: var(--muted); padding: 0.1rem 0 0.25rem; }
+.howto { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1.2rem; font-family: var(--display); font-size: 0.82rem; color: var(--ink-2); padding-bottom: 0.6rem; }
+.howto .ex { display: inline-flex; align-items: center; gap: 0.45rem; }
+.howto .ex b { display: inline-block; width: 3.2rem; height: 0.6rem; border-radius: 999px; background: var(--c, var(--arena)); }
+.row, .axis { padding-inline: 0.3rem; }
+@media (max-width: 640px) {
+  .row, .axis { grid-template-columns: 2.9rem minmax(0, 1.25fr) minmax(0, 1fr); gap: 0.5rem; }
+  .row .sc, .axis .sc-h { display: none; }
+  .row .nm { font-size: 0.84rem; }
+  .board-card { padding-inline: 0.7rem; }
+  .board-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+  .metric .v { font-size: 1.1rem; }
+}
+
+/* explainer */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.4rem 2.6rem; }
+.rule-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.1rem 1.2rem; display: grid; gap: 0.6rem; }
+.formula { font-family: var(--mono); font-size: 0.9rem; line-height: 1.7; overflow-x: auto; white-space: nowrap; }
+.err { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.7rem; align-items: start; }
+.err .sign { font: 800 1.3rem/1 var(--display); color: var(--muted); padding-top: 0.15rem; }
+
+/* waffles */
+.waffles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 2rem 3rem; }
+.waffle-block { display: grid; gap: 0.7rem; }
+.waffle-num { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.waffle-num .big { font: 700 clamp(2.4rem, 6vw, 3.4rem)/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.waffle-num .of { font: 500 1rem var(--display); color: var(--ink-2); }
+.waffle { display: grid; grid-template-columns: repeat(40, minmax(0, 1fr)); gap: 2px; max-width: 30rem; }
+.waffle i { display: block; aspect-ratio: 1; background: var(--hit); border-radius: 1px; }
+.waffle i.x { background: var(--miss); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--display); font-size: 0.82rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.legend i { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+
+/* dial */
+.dial { display: grid; gap: 1.2rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem; }
+.dial-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem 2rem; align-items: end; }
+.slider { display: grid; gap: 0.4rem; }
+.slider label { font: 600 0.88rem var(--display); }
+.slider .zval { font: 700 1.9rem/1 var(--mono); }
+input[type=range] { width: 100%; accent-color: var(--ink); }
+.marks { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.marks button { font: 600 0.78rem var(--display); border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2);
+  border-radius: 999px; padding: 0.3rem 0.65rem; cursor: pointer; }
+.marks button:hover { border-color: var(--ink-2); color: var(--ink); }
+.charts2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem 2rem; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--display); fill: var(--ink-2); }
+svg .num { font-family: var(--mono); }
+.gridline { stroke: var(--rule); stroke-width: 1; }
+.axisline { stroke: var(--muted); stroke-width: 1; }
+.target { stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+/* procedure bars */
+.pbars { display: grid; gap: 0.35rem; }
+.pbar { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 7.5rem; gap: 0.8rem; align-items: center; }
+.pbar .nm { font: 600 0.9rem var(--display); }
+.pbar .tr { height: 1.15rem; position: relative; }
+.pbar .tr b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--c, var(--neutral)); }
+.pbar .vv { font: 400 0.82rem var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .pbar { grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 0.6rem; margin-bottom: 0.35rem; }
+  .pbar .nm { grid-column: 1; grid-row: 1; } .pbar .vv { grid-column: 2; grid-row: 1; } .pbar .tr { grid-column: 1 / -1; grid-row: 2; height: 0.8rem; }
+}
+
+/* stress table */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-family: var(--display); font-size: 0.9rem; }
+th, td { text-align: right; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 700; font-size: 0.74rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); }
+td .pill { display: inline-block; min-width: 4.4rem; padding: 0.12rem 0.45rem; border-radius: 4px; text-align: right; }
+td .low { background: color-mix(in srgb, var(--miss) 18%, transparent); color: var(--ink); }
+@media (max-width: 560px) { th, td { padding: 0.45rem 0.25rem; } th { font-size: 0.66rem; letter-spacing: 0.04em; }
+  td .pill { min-width: 3.5rem; padding-inline: 0.3rem; } table { font-size: 0.82rem; } }
+
+/* heatmap */
+.hm-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem 2rem; align-items: end; margin-bottom: 1rem; }
+.hm-count { font: 700 1.9rem/1 var(--mono); }
+.hm-wrap { overflow-x: auto; }
+.hm { display: grid; grid-template-columns: minmax(9rem, 14rem) repeat(8, minmax(2.4rem, 1fr)); gap: 2px; min-width: 32rem; }
+.hm .h { font: 600 0.72rem/1.15 var(--display); color: var(--muted); text-align: center; padding-bottom: 0.35rem; align-self: end; }
+.hm .m { font: 500 0.78rem/1.2 var(--display); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center;
+  position: sticky; left: 0; z-index: 1; background: var(--paper); height: 100%; display: flex; align-items: center; padding-right: 0.3rem; }
+.hm .h .s { display: none; }
+.hm .corner { position: sticky; left: 0; z-index: 1; background: var(--paper); align-self: stretch; }
+@media (max-width: 640px) {
+  .hm { grid-template-columns: minmax(7.6rem, 8.6rem) repeat(8, minmax(2.3rem, 1fr)); min-width: 28rem; }
+  .hm .m { font-size: 0.7rem; }
+  .hm .h .f { display: none; } .hm .h .s { display: inline; }
+}
+.hm .c { position: relative; height: 1.25rem; border-radius: 2px; background: var(--mid); border: 0; padding: 0; cursor: default; }
+.hm .c.sig::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0.36rem; height: 0.36rem; margin: -0.18rem;
+  border-radius: 50%; background: var(--ink); }
+.hm .c.na { background: transparent; outline: 1px dashed var(--rule); outline-offset: -1px; }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--paper); font: 500 0.8rem/1.4 var(--display);
+  padding: 0.5rem 0.65rem; border-radius: 6px; max-width: 16rem; }
+.tip .num { font-family: var(--mono); }
+.scale { display: flex; align-items: center; gap: 0.5rem; font: 400 0.75rem var(--mono); color: var(--muted); }
+.scale .grad { width: 9rem; height: 0.55rem; border-radius: 3px; }
+
+/* short answers and method steps */
+.answer { font-size: 1.12rem; line-height: 1.5; color: var(--ink); border-left: 3px solid var(--c, var(--ink)); padding-left: 0.9rem; }
+.answer strong { font-weight: 600; }
+.steps { list-style: none; margin: 0 0 2rem; padding: 0; display: grid; gap: 1rem 1.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); counter-reset: st; }
+.steps li { counter-increment: st; border-top: 2px solid var(--ink); padding-top: 0.6rem; display: grid; gap: 0.25rem; align-content: start; }
+.steps li::before { content: counter(st); font: 700 0.8rem var(--mono); color: var(--muted); }
+.steps strong { font: 700 0.98rem/1.3 var(--display); }
+.steps span { font-size: 0.92rem; line-height: 1.5; color: var(--ink-2); }
+.theme-btn { font: 600 0.88rem var(--display); color: var(--ink-2); background: none; border: 1px solid var(--rule);
+  border-radius: 999px; padding: 0.2rem 0.7rem; cursor: pointer; }
+.theme-btn:hover { color: var(--ink); border-color: var(--ink-2); }
+
+/* takeaways */
+.takeaways { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.4rem 2rem; }
+.tk { display: grid; gap: 0.4rem; align-content: start; }
+.tk .n { font: 700 0.8rem var(--mono); color: var(--muted); }
+footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88rem; color: var(--ink-2); display: grid; gap: 0.8rem; }
+.refs { font-size: 0.84rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><strong>STAT 236 · Fall 2026</strong> · Harry Hu, Chloe Yu, Ender Yang, Chenxi Ge</div>
+    <nav>
+      <a href="https://github.com/chenxige0509/stat236-arena-uncertainty/blob/main/report/report.pdf">Report (PDF)</a>
+      <a href="https://github.com/chenxige0509/stat236-arena-uncertainty">Code and data</a>
+      <button class="theme-btn" id="theme-btn" type="button"></button>
+    </nav>
+  </header>
+
+  <!-- ============================================================ hero -->
+  <section class="hero" aria-labelledby="h-hero">
+    <div class="hero-grid">
+      <div class="hero-top">
+      <div class="stack col">
+        <p class="eyebrow">Chatbot Arena · Bradley–Terry · multiple testing</p>
+        <h1 id="h-hero">How certain is the Chatbot&nbsp;Arena leaderboard?</h1>
+        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing 129 models at once. We measured how often it is right, which corrections fix it, and what they cost.</p>
+      </div>
+      <div class="glance" aria-label="Main findings">
+        <div class="g"><span class="gq">Q1</span><span class="gv">90.9%</span><span class="gk">of simulated leaderboards have all 129 rank spreads right. The target is 95%.</span></div>
+        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width with pairwise tests and Holm's correction, the narrowest valid fix we found (Bonferroni: 13.6).</span></div>
+        <div class="g"><span class="gq">Q3</span><span class="gv">275 of 958</span><span class="gk">model–category pairs pass Bonferroni as specialties, if our null's noise level is right.</span></div>
+      </div>
+      </div>
+      <div class="board-card">
+        <div class="seg" role="group" aria-label="Procedure used to compute the rank intervals" id="seg-board"></div>
+        <p class="proc-note" id="proc-note"></p>
+        <div class="board-meta" id="board-meta"></div>
+        <p class="howto" id="howto"><span class="ex"><b id="howto-bar"></b>one bar = the ranks a model could hold under the chosen procedure; longer means less certain</span><span>Click a model to compare all four procedures.</span></p>
+        <div class="axis" aria-hidden="true"><span class="lbl">Rank</span><span class="lbl">Model</span><span class="lbl sc-h" style="text-align:right">Rating</span><div class="ticks" id="ticks"></div></div>
+        <div class="rows" id="rows"></div>
+        <div class="board-foot">
+          <p class="cap">The real 2024-08-12 board (129 models), refit from the public battle data. Rating column: Arena's rating ± its 95% interval. The simulation figures above come from Q1 and Q2 below.</p>
+          <button class="linkbtn" id="toggle-all" type="button">Show all 129 models</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ the rule -->
+  <section aria-labelledby="h-rule">
+    <div class="sec-head col">
+      <p class="eyebrow">Step 0 · What the site computes</p>
+      <h2 id="h-rule">A rank spread is read off overlapping score intervals</h2>
+    </div>
+    <div class="two">
+      <div class="stack col">
+        <p>Each model gets a Bradley–Terry rating and a 95% interval. Its best rank is one plus the number of models whose whole interval sits above its own; its worst rank is one plus the number whose interval reaches above its lower end. We refit the public 2024 battle data with Arena's own code and matched the published ratings to a median of 0.06 points. On today's site every interval on all 4,773 published 2026 text boards is exactly the rating ± 1.96 standard errors, and the formula reproduces both ends of the displayed spread for all 59 models we recorded.</p>
+        <p>The original Arena paper says a ranking needs intervals that hold <em>simultaneously</em>. The site's intervals hold one model at a time. That creates two errors that pull in opposite directions.</p>
+      </div>
+      <div class="rule-box" aria-label="The two errors">
+        <div class="formula">best&nbsp;&nbsp;= 1 + #{ models with L &gt; my U }<br>worst = 1 + #{ others with U &gt; my L }</div>
+        <div class="err"><span class="sign">−</span><p class="small"><strong>Too narrow.</strong> 5% of 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
+        <div class="err"><span class="sign">+</span><p class="small"><strong>Too cautious.</strong> Two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ Q1 -->
+  <section aria-labelledby="h-q1">
+    <div class="sec-head col">
+      <p class="eyebrow">Q1 · Diagnosis</p>
+      <h2 id="h-q1">How often is the whole table of rank spreads right?</h2>
+      <p class="answer">In 90.9% of simulated leaderboards, a little short of the 95% target. The two errors above almost cancel.</p>
+      <p>We cannot check real ranks against the truth, so we built a world where the truth is known. Each square below is one simulated leaderboard.</p>
+    </div>
+    <ol class="steps" aria-label="How the simulation works">
+      <li><strong>Fix a true world</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
+      <li><strong>Replay the battles</strong><span>Keep every real matchup and redraw who won (or tied) from the true win probabilities.</span></li>
+      <li><strong>Rerun the method</strong><span>Refit, build Arena's intervals and rank spreads, and the corrected versions for Q2.</span></li>
+      <li><strong>Score it, 1,000 times</strong><span>Check every interval against the known truth. Coverage is the share of datasets in which all 129 hold.</span></li>
+    </ol>
+    <div class="waffles">
+      <div class="waffle-block">
+        <div class="waffle-num"><span class="big" id="w1-n"></span><span class="of">of 1,000 datasets</span></div>
+        <h3>All 129 score intervals contain the true score</h3>
+        <div class="waffle" id="waffle-ci" role="img"></div>
+        <p class="small">Each interval is right <span id="ci-each"></span> of the time on its own, but <span id="miss-rep"></span> of 129 miss in a typical dataset.</p>
+      </div>
+      <div class="waffle-block">
+        <div class="waffle-num"><span class="big" id="w2-n"></span><span class="of">of 1,000 datasets</span></div>
+        <h3>All 129 rank spreads contain the true rank</h3>
+        <div class="waffle" id="waffle-rs" role="img"></div>
+        <p class="small">A missed score interval rarely moves a rank. Each spread is right <span id="rs-each"></span> of the time, and the whole table 90.9% (target: 95%).</p>
+      </div>
+    </div>
+    <div class="legend" style="margin-top:1.2rem"><span><i style="background:var(--hit)"></i>every interval right</span><span><i style="background:var(--miss)"></i>at least one wrong</span></div>
+    <p class="col small" style="margin-top:1.4rem">Nothing in Arena's method targets the 90.9%; it depends on how many models happen to be nearly tied (see the stress test in Q2). Which ranks are shaky? Crowding matters most: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
+  </section>
+
+  <!-- ============================================================ Q2 -->
+  <section aria-labelledby="h-q2">
+    <div class="sec-head col">
+      <p class="eyebrow">Q2 · Repair</p>
+      <h2 id="h-q2">Which correction fixes the spreads, and what does it cost?</h2>
+      <p class="answer" style="--c:var(--holm)">Testing each pair of models directly, with Holm's step-down correction. Its spreads held in all 1,000 datasets at a mean width of 11.3 ranks, against 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper.</p>
+      <p>First, how wide do the spreads need to be? Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. Drag the multiplier, or use the three buttons, and see what the whole leaderboard does across the same 1,000 simulated datasets.</p>
+    </div>
+    <div class="dial">
+      <div class="dial-top">
+        <div class="slider">
+          <label for="zdial">Interval multiplier <em>z</em></label>
+          <div class="zval num" id="zval"></div>
+          <input type="range" id="zdial" min="0" max="1" step="1" value="0" aria-describedby="z-readout">
+          <div class="marks" id="zmarks"></div>
+        </div>
+        <div class="metric"><span class="k">All 129 rank spreads right</span><span class="v" id="z-cover"></span><span class="d" id="z-readout"></span></div>
+        <div class="metric"><span class="k">Mean width of a rank spread</span><span class="v" id="z-width"></span><span class="d">ranks</span></div>
+      </div>
+      <div class="charts2">
+        <figure style="margin:0"><svg id="ch-cover" viewBox="0 0 420 230" role="img" aria-label="Share of datasets with all rank spreads right, against z"></svg><figcaption class="cap">All 129 rank spreads right, by <em>z</em>. Dashed: the 95% target.</figcaption></figure>
+        <figure style="margin:0"><svg id="ch-width" viewBox="0 0 420 230" role="img" aria-label="Mean rank spread width against z"></svg><figcaption class="cap">Mean width of a rank spread, in ranks.</figcaption></figure>
+      </div>
+      <p class="small">The smallest <em>z</em> that reaches 95% is about 2.1. That choice uses the true ranks, so no real procedure can make it; it shows how little extra width the table actually needs.</p>
+    </div>
+
+    <div class="two" style="margin-top:2.6rem">
+      <div class="stack col">
+        <h3>Six valid fixes, very different prices</h3>
+        <p>Every correction below keeps all 129 rank intervals right in all 1,000 datasets. They differ in how much width they spend doing it. The χ² set from the original Arena paper protects every linear combination of the 129 scores, far more than a ranking needs. A ranking only needs the sign of each pairwise difference, so testing each pair of models directly is cheaper, and Holm's step-down procedure is the cheapest.</p>
+        <p class="small">Holm sorts the 8,256 pairs by |<em>z</em>| of their rating gap. The largest must clear the Bonferroni bar of 4.52; each rejection lowers the bar for the rest, down to 3.96 on average here because thousands of pairs are clear-cut. A one-sided version of Holm, whose control of wrong orderings is fully proven, never goes below 4.38 and needs 12.4 ranks.</p>
+      </div>
+      <div class="pbars" id="pbars" aria-label="Mean rank interval width by procedure"></div>
+    </div>
+
+    <div style="margin-top:2.6rem" class="stack">
+      <h3 class="col">Stress test: what happens when models are tied?</h3>
+      <p class="col">The real 2024 strengths have few near-ties, so every correction looks overly safe. We rebuilt the world with tied models, where the guarantees are actually tested. Share of 1,000 datasets in which all rank intervals are right:</p>
+      <div class="tbl-wrap"><table id="stress"></table></div>
+      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads collapse once ties exist. Holm stays above 95% everywhere; its guarantee is a theorem for exact ties, and the near-tie world, where no theorem applies, turns out to be easier.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ Q3 -->
+  <section aria-labelledby="h-q3">
+    <div class="sec-head col">
+      <p class="eyebrow">Q3 · Category leaderboards</p>
+      <h2 id="h-q3">Are category “specialties” real?</h2>
+      <p class="answer" style="--c:var(--pos)">Some clearly are, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry.</p>
+      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject “no specialties at all” with <em>p</em> = 0.002, the smallest value 500 null draws can give. The open question is how many pairs to flag.</p>
+    </div>
+    <div class="hm-controls">
+      <div class="slider">
+        <label for="noise">If the real noise is <span class="num" id="noise-v"></span> × what our null assumes</label>
+        <input type="range" id="noise" min="1" max="4" step="0.1" value="1">
+      </div>
+      <div class="metric"><span class="k">Bonferroni finds</span><span class="hm-count num" id="hm-count"></span><span class="d">of 958 pairs (dots below, for the top 40 models)</span></div>
+    </div>
+    <p class="cap col" style="margin-bottom:0.8rem">Each cell is one model in one category. Hover or tab to a cell for its numbers. The slider divides every <em>z</em>* by the noise factor and recounts the pairs above the Bonferroni bar of <span class="num" id="crit-v"></span>.</p>
+    <div class="hm-wrap"><div class="hm" id="hm" role="group" aria-label="Specialty of each model in each category. Use the arrow keys to move between cells."></div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem 1.6rem;margin-top:0.9rem;align-items:center">
+      <div class="scale"><span>−80</span><span class="grad" id="grad"></span><span>+80 rating points</span></div>
+      <div class="legend"><span><i style="background:var(--ink);border-radius:50%"></i>passes Bonferroni</span><span><i style="outline:1px dashed var(--muted);background:transparent"></i>under 200 battles, not tested</span></div>
+    </div>
+    <p class="col small" style="margin-top:1.2rem">Red: stronger in that category than overall; blue: weaker. The largest effects are about language. Llama 3 70B is 73 points weaker in Chinese than overall, while all nine Qwen models are 50–84 points stronger in Chinese, eight of them significantly. The null redraws every vote independently. On the real board the <em>z</em>* have a robust spread of 3.3 instead of 1, which could be real specialties or extra noise the null leaves out, such as many votes from the same user. If the noise were 2 or 3 times the null's, Bonferroni would flag 76 or 26 pairs; even at 4 times, seven remain, five of them about language.</p>
+  </section>
+
+  <!-- ============================================================ takeaways -->
+  <section aria-labelledby="h-take">
+    <div class="sec-head col"><p class="eyebrow">What we learned</p><h2 id="h-take">Takeaways</h2></div>
+    <div class="takeaways">
+      <div class="tk"><span class="n">Q1</span><h3>Nearly right by accident</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because two errors roughly cancel. Nothing in the method targets that number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
+      <div class="tk"><span class="n">Q2</span><h3>Test the pairs a ranking needs</h3><p class="small">A ranking only needs the signs of pairwise differences. Pairwise tests with Holm give valid spreads 18% narrower than Bonferroni and about three to four times narrower than the χ² set.</p></div>
+      <div class="tk"><span class="n">Real board</span><h3>223 orderings do not survive</h3><p class="small">Of the 7,808 “A beats B” statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
+      <div class="tk"><span class="n">Q3</span><h3>Specialties exist; counting them is harder</h3><p class="small">Language effects are large and unmistakable. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
+    </div>
+    <p class="col small" style="margin-top:1.8rem"><strong>Limits.</strong> The simulation treats battles as independent and strengths as fixed, uses one 2024 snapshot with 129 models (today's board has about 400), and relies on normal approximations. Correlated votes would likely lower Arena's coverage further.</p>
+  </section>
+
+  <footer>
+    <p>Data: the public LMSYS battle dump of 2024-08-14 (1.66 million battles after Arena's filter), the official 2024-08-12 leaderboard snapshot, and LMArena's 2026 <span class="mono">leaderboard-dataset</span>. Code: Arena's open-source <span class="mono">arena-rank</span> package plus our simulation, all in the <a href="https://github.com/chenxige0509/stat236-arena-uncertainty">project repository</a>; the <a href="https://github.com/chenxige0509/stat236-arena-uncertainty/blob/main/report/report.pdf">report</a> has the methods, proofs and full results.</p>
+    <p class="refs">Chiang et al. (2024), Chatbot Arena, ICML · LMArena (2025), Arena's ranking method · Holm (1979) · Benjamini &amp; Hochberg (1995) · Donoho &amp; Jin (2004, 2015) · Mogstad, Romano, Shaikh &amp; Wilhelm (2024).</p>
+  </footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const D = /*__DATA__*/null;
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const pct = (v, d = 1) => (100 * v).toFixed(d) + "%";
+const fmt = (n) => n.toLocaleString("en-US");
+const NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+/* ------------------------------------------------------------ leaderboard */
+const PROCS = [
+  { k: "arena", name: "Arena (site)", c: "var(--arena)", note: "What the site shows: per-model 95% intervals, separated only where they do not overlap. No multiplicity correction." },
+  { k: "holm", name: "Holm", c: "var(--holm)", note: "Pairwise z-tests for all 8,256 pairs with Holm's step-down correction. The narrowest valid procedure we found." },
+  { k: "bonferroni", name: "Bonferroni", c: "var(--bonf)", note: "Arena's intervals widened from 1.96 to 3.55 standard errors, so that all 129 hold at once with 95% probability." },
+  { k: "chi2_scheffe", name: "χ² set", c: "var(--neutral)", note: "The simultaneous confidence set of the original Arena paper, read through pairwise differences. Valid, but it protects far more than a ranking needs." },
+];
+let proc = "arena", showAll = false, openIdx = 3;
+const segB = $("#seg-board");
+PROCS.forEach((p) => {
+  const b = el("button"); b.type = "button"; b.style.setProperty("--c", p.c); b.dataset.k = p.k;
+  b.append(el("span", "sw"), document.createTextNode(p.name));
+  b.addEventListener("click", () => { proc = p.k; renderBoard(); });
+  segB.append(b);
+});
+const rangeTxt = ([b, w]) => (b === w ? `${b}` : `${b}–${w}`);
+const placeBar = (bar, [b, w], maxR) => {
+  const lo = Math.min(b, maxR), hi = Math.min(w, maxR);
+  bar.style.left = `${(100 * (lo - 1)) / maxR}%`;
+  bar.style.width = `max(0.6rem, ${(100 * (hi - lo + 1)) / maxR}%)`;
+};
+let rowEls = [], cmpEl = null;
+function renderCompare(maxR) {
+  if (cmpEl) { cmpEl.remove(); cmpEl = null; }
+  rowEls.forEach((row, i) => row.setAttribute("aria-expanded", i === openIdx));
+  if (openIdx == null || openIdx >= rowEls.length) return;
+  const r = D.board[openIdx];
+  cmpEl = el("div", "cmp"); cmpEl.id = "cmp";
+  rowEls[openIdx].setAttribute("aria-controls", "cmp");
+  PROCS.forEach((p) => {
+    const sub = el("div", "row" + (p.k === proc ? " on" : "")), nm = el("span", "nm"), sw = el("i");
+    sw.style.setProperty("--c", p.c); nm.append(sw, document.createTextNode(p.name));
+    const iv = r[p.k], trk = el("div", "trk"), bar = el("div", "bar");
+    bar.style.setProperty("--c", p.c); placeBar(bar, iv, maxR); trk.append(bar);
+    sub.append(el("span", "rk", rangeTxt(iv)), nm, el("span", "sc", `${iv[1] - iv[0] + 1} rank${iv[1] > iv[0] ? "s" : ""}`), trk);
+    cmpEl.append(sub);
+  });
+  cmpEl.append(el("p", "hint", `${r.m}: rating ${r.r.toFixed(1)} ± ${r.ci.toFixed(1)}, ${fmt(r.n)} battles. Same model, same data; only the procedure changes.`));
+  rowEls[openIdx].after(cmpEl);
+}
+function renderBoard() {
+  const P = PROCS.find((p) => p.k === proc), S = D.summary[proc];
+  segB.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === proc));
+  $("#proc-note").textContent = P.note;
+  $("#howto-bar").style.setProperty("--c", P.c);
+  const meta = $("#board-meta"); meta.replaceChildren();
+  [["Mean width, real board", S.realWidth.toFixed(1), "ranks per model"],
+   ["All 129 right, simulation", pct(S.cover), "of 1,000 datasets (target 95%)"],
+   ["True orderings found", pct(S.power),
+    S.anyFalse > 0 ? `but a false one in ${pct(S.anyFalse)} of datasets` : "never a false one in the simulation"]].forEach(([k, v, d]) => {
+    const m = el("div", "metric"); m.append(el("span", "k", k), el("span", "v", v), el("span", "d", d)); meta.append(m);
+  });
+  const rows = showAll ? D.board : D.board.slice(0, 20);
+  const maxR = showAll ? D.board.length : 45;
+  const ticks = $("#ticks"); ticks.replaceChildren();
+  const narrow = ticks.clientWidth < 300;
+  (showAll ? (narrow ? [1, 40, 80, 129] : [1, 20, 40, 60, 80, 100, 129])
+           : (narrow ? [1, 15, 30, 45] : [1, 5, 10, 15, 20, 25, 30, 35, 40, 45])).forEach((t) => {
+    const s = el("span", null, t); s.style.left = `${(100 * (t - 0.5)) / maxR}%`; ticks.append(s);
+  });
+  const box = $("#rows");
+  if (rowEls.length !== rows.length) {
+    box.replaceChildren(); cmpEl = null;
+    rowEls = rows.map((r, i) => {
+      const row = el("button", "row"); row.type = "button";
+      const trk = el("div", "trk"), bar = el("div", "bar"); trk.append(bar);
+      row.append(el("span", "rk"), el("span", "nm", r.m), el("span", "sc", `${r.r.toFixed(0)} ± ${r.ci.toFixed(1)}`), trk);
+      row.addEventListener("click", () => { openIdx = openIdx === i ? null : i; renderCompare(maxR); });
+      box.append(row);
+      return row;
+    });
+  }
+  rows.forEach((r, i) => {
+    const row = rowEls[i];
+    row.querySelector(".rk").textContent = rangeTxt(r[proc]);
+    row.setAttribute("aria-label", `${r.m}, rank ${rangeTxt(r[proc])} under ${P.name}. Show all procedures`);
+    const bar = row.querySelector(".bar");
+    placeBar(bar, r[proc], maxR);
+    bar.style.setProperty("--c", P.c);
+  });
+  renderCompare(maxR);
+  $("#toggle-all").textContent = showAll ? "Show the top 20" : "Show all 129 models";
+}
+$("#toggle-all").addEventListener("click", () => { showAll = !showAll; rowEls = []; renderBoard(); });
+let wasNarrow = null;
+addEventListener("resize", () => { const n = $("#ticks").clientWidth < 300; if (n !== wasNarrow) { wasNarrow = n; renderBoard(); } });
+renderBoard();
+
+/* ------------------------------------------------------------ theme toggle */
+(function () {
+  const btn = $("#theme-btn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const isDark = () => (root.dataset.theme ? root.dataset.theme === "dark" : mq.matches);
+  const label = () => { btn.textContent = isDark() ? "Light theme" : "Dark theme"; };
+  btn.addEventListener("click", () => {
+    root.dataset.theme = isDark() ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    label();
+  });
+  mq.addEventListener?.("change", label);
+  label();
+})();
+
+/* ------------------------------------------------------------ Q1 waffles */
+function waffle(id, bits, label) {
+  const w = $(id), frag = document.createDocumentFragment();
+  for (const ch of bits) frag.append(el("i", ch === "1" ? null : "x"));
+  w.append(frag);
+  const ok = [...bits].filter((c) => c === "1").length;
+  w.setAttribute("aria-label", `${label}: ${ok} of 1,000 datasets`);
+  return ok;
+}
+$("#w1-n").textContent = waffle("#waffle-ci", D.q1.ciAll, "All score intervals right");
+$("#w2-n").textContent = waffle("#waffle-rs", D.q1.rsAll, "All rank spreads right");
+$("#ci-each").textContent = pct(D.q1.ciEach);
+$("#rs-each").textContent = pct(D.q1.rsEach);
+$("#miss-rep").textContent = D.q1.missPerRep.toFixed(1);
+
+/* ------------------------------------------------------------ Q2 dial */
+const Z = D.sweep.z, zMin = 1.8, zMax = 4.0;
+const dial = $("#zdial"); dial.max = Z.length - 1;
+const idxOf = (z) => Z.reduce((bi, v, i) => (Math.abs(v - z) < Math.abs(Z[bi] - z) ? i : bi), 0);
+const MARKS = [["Arena", 1.96], ["Oracle", 2.1], ["Bonferroni", 3.548]];
+MARKS.forEach(([n, z]) => { const b = el("button", null, `${n} · ${z.toFixed(2)}`); b.type = "button";
+  b.addEventListener("click", () => { dial.value = idxOf(z); renderDial(); }); $("#zmarks").append(b); });
+dial.value = idxOf(1.96);
+function lineChart(svg, ys, yMin, yMax, yTicks, yFmt, target) {
+  const W = 420, H = 230, L = 44, R = 12, T = 12, B = 30;
+  const x = (z) => L + ((z - zMin) / (zMax - zMin)) * (W - L - R), y = (v) => T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B);
+  svg.replaceChildren();
+  yTicks.forEach((t) => { svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(t), y2: y(t), class: "gridline" }));
+    const tx = svgEl("text", { x: L - 6, y: y(t) + 4, "text-anchor": "end", "font-size": 11, class: "num" }); tx.textContent = yFmt(t); svg.append(tx); });
+  [2, 2.5, 3, 3.5, 4].forEach((t) => { const tx = svgEl("text", { x: x(t), y: H - 10, "text-anchor": "middle", "font-size": 11, class: "num" }); tx.textContent = t.toFixed(1); svg.append(tx); });
+  svg.append(svgEl("line", { x1: L, x2: W - R, y1: H - B, y2: H - B, class: "axisline" }));
+  const zl = svgEl("text", { x: L - 6, y: H - 10, "text-anchor": "end", "font-size": 11, "font-style": "italic" }); zl.textContent = "z"; svg.append(zl);
+  if (target != null) svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(target), y2: y(target), class: "target" }));
+  const d = Z.map((z, i) => `${i ? "L" : "M"}${x(z).toFixed(1)},${y(Math.max(yMin, Math.min(yMax, ys[i]))).toFixed(1)}`).join("");
+  svg.append(svgEl("path", { d, fill: "none", stroke: "var(--ink)", "stroke-width": 2 }));
+  MARKS.forEach(([n, z], k) => { const i = idxOf(z), c = ["var(--arena)", "var(--ink-2)", "var(--bonf)"][k];
+    svg.append(svgEl("circle", { cx: x(Z[i]), cy: y(ys[i]), r: 4, fill: c })); });
+  const cur = svgEl("g", {}); svg.append(cur);
+  return (i) => { cur.replaceChildren(
+    svgEl("line", { x1: x(Z[i]), x2: x(Z[i]), y1: T, y2: H - B, stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "2 3" }),
+    svgEl("circle", { cx: x(Z[i]), cy: y(ys[i]), r: 6, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2.5 })); };
+}
+const curCover = lineChart($("#ch-cover"), D.sweep.cover, 0.8, 1.0, [0.8, 0.85, 0.9, 0.95, 1.0], (t) => `${Math.round(100 * t)}%`, 0.95);
+const curWidth = lineChart($("#ch-width"), D.sweep.width, 7, 16, [7, 10, 13, 16], (t) => t.toFixed(0), null);
+function renderDial() {
+  const i = +dial.value, z = Z[i], c = D.sweep.cover[i];
+  $("#zval").textContent = z.toFixed(2);
+  $("#z-cover").textContent = pct(c);
+  $("#z-readout").textContent = c >= 0.95 ? "meets the 95% target" : "below the 95% target";
+  $("#z-width").textContent = D.sweep.width[i].toFixed(1);
+  curCover(i); curWidth(i);
+}
+dial.addEventListener("input", renderDial);
+renderDial();
+
+/* procedure bars */
+const PB = [["arena", "Arena (uncorrected)", "var(--arena)"], ["holm", "Holm", "var(--holm)"],
+  ["holm_onesided", "Holm, one-sided", "var(--neutral)"], ["pairwise_bonferroni", "Pairwise Bonferroni", "var(--neutral)"],
+  ["bonferroni", "Bonferroni", "var(--bonf)"], ["chi2_scheffe", "χ² set (Scheffé)", "var(--neutral)"], ["chi2", "χ² set (projected)", "var(--neutral)"]];
+const maxW = Math.max(...PB.map(([k]) => D.summary[k].width));
+PB.forEach(([k, n, c]) => { const S = D.summary[k], r = el("div", "pbar"), tr = el("div", "tr"), b = el("b");
+  b.style.width = `${(100 * S.width) / maxW}%`; b.style.setProperty("--c", c); tr.append(b);
+  r.append(el("span", "nm", n), tr, el("span", "vv", `${S.width.toFixed(1)} · ${pct(S.cover, 1)}`)); $("#pbars").append(r); });
+const leg = el("p", "cap", "Mean width of a rank interval in ranks (bar) · share of 1,000 datasets with all 129 right"); $("#pbars").prepend(leg);
+
+/* stress table */
+(function () {
+  const t = $("#stress"), head = el("tr");
+  ["World", "Arena", "Bonferroni", "Holm"].forEach((h) => head.append(el("th", null, h)));
+  const thead = el("thead"); thead.append(head); t.append(thead);
+  const tb = el("tbody");
+  D.stress.forEach((r) => { const tr = el("tr"); tr.append(el("td", null, r.world));
+    ["arena", "bonferroni", "holm"].forEach((k) => { const td = el("td", "num"), s = el("span", "pill" + (r[k] < 0.95 ? " low" : ""), pct(r[k], 1)); td.append(s); tr.append(td); });
+    tb.append(tr); });
+  t.append(tb);
+})();
+
+/* ------------------------------------------------------------ Q3 heatmap */
+(function () {
+  const Q = D.q3, hm = $("#hm"), tip = $("#tip"), noise = $("#noise");
+  const lookup = new Map(Q.cells.map((c) => [`${c.m}|${c.c}`, c]));
+  const sign = (v) => (v > 0 ? "+" : v < 0 ? "−" : "");
+  hm.append(el("div", "h corner", ""));
+  const SHORT = ["Code", "Math", "Instr.", "Hard", "Chin.", "Rus.", "Multi", "Long"];
+  Q.cats.forEach((c, i) => { const h = el("div", "h"); h.title = c; h.append(el("span", "f", c), el("span", "s", SHORT[i])); hm.append(h); });
+  const grid = [], tested = [];
+  const passes = (c) => Math.abs(c.z) / +noise.value > Q.crit;
+  const describe = (m, cat, c) => !c ? `${m}, ${cat}: under 200 battles, not tested`
+    : `${m}, ${cat}: ${sign(c.pts)}${Math.abs(c.pts).toFixed(1)} points, z* ${sign(c.z)}${Math.abs(c.z).toFixed(1)}, ${passes(c) ? "passes" : "does not pass"} Bonferroni`;
+  let tipFor = null;
+  const show = (b, m, cat, c) => {
+    tipFor = [b, m, cat, c];
+    tip.replaceChildren(el("div", null, m), el("div", null, cat));
+    if (c) tip.append(el("div", "num", `${sign(c.pts)}${Math.abs(c.pts).toFixed(1)} rating points · z* = ${sign(c.z)}${Math.abs(c.z).toFixed(1)}`),
+      el("div", null, `${fmt(c.n)} battles in the category`),
+      el("div", null, passes(c) ? `Passes Bonferroni at noise × ${(+noise.value).toFixed(1)}` : `Not significant at noise × ${(+noise.value).toFixed(1)}`));
+    else tip.append(el("div", null, "Under 200 battles, not tested"));
+    tip.hidden = false;
+    const r = b.getBoundingClientRect();
+    const x = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2));
+    const y = r.top - tip.offsetHeight - 8 < 8 ? r.bottom + 8 : r.top - tip.offsetHeight - 8;
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  };
+  const hide = () => { tip.hidden = true; tipFor = null; };
+  const onScroll = () => { if (tipFor && document.activeElement === tipFor[0]) show(...tipFor); else hide(); };
+  Q.models.forEach((m, mi) => {
+    const name = el("div", "m", m); name.title = m; hm.append(name);
+    grid.push([]);
+    Q.cats.forEach((cat, ci) => {
+      const c = lookup.get(`${m}|${ci}`), b = el("button", "c");
+      b.type = "button"; b.tabIndex = mi === 0 && ci === 0 ? 0 : -1;
+      if (!c) b.classList.add("na");
+      else {
+        const a = Math.min(1, Math.abs(c.pts) / 80);
+        b.style.background = `color-mix(in srgb, ${c.pts > 0 ? "var(--pos)" : "var(--neg)"} ${Math.round(a * 85)}%, var(--mid))`;
+        tested.push([b, c, m, cat]);
+      }
+      b.setAttribute("aria-label", describe(m, cat, c));
+      b.addEventListener("mouseenter", () => show(b, m, cat, c)); b.addEventListener("focus", () => show(b, m, cat, c));
+      b.addEventListener("mouseleave", () => { if (document.activeElement !== b) hide(); }); b.addEventListener("blur", hide);
+      b.addEventListener("keydown", (ev) => {
+        const d = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[ev.key];
+        if (!d) return;
+        ev.preventDefault();
+        const nm = Math.max(0, Math.min(Q.models.length - 1, mi + d[0])), nc = Math.max(0, Math.min(Q.cats.length - 1, ci + d[1]));
+        b.tabIndex = -1; const t = grid[nm][nc]; t.tabIndex = 0; t.focus();
+      });
+      grid[mi].push(b); hm.append(b);
+    });
+  });
+  $("#grad").style.background = "linear-gradient(90deg, var(--neg), var(--mid), var(--pos))";
+  $("#crit-v").textContent = Q.crit.toFixed(2);
+  const render = () => {
+    const k = +noise.value;
+    $("#noise-v").textContent = k.toFixed(1);
+    noise.setAttribute("aria-valuetext", `noise ${k.toFixed(1)} times the null`);
+    $("#hm-count").textContent = Q.allZ.filter((z) => z / k > Q.crit).length;
+    tested.forEach(([b, c, m, cat]) => { b.classList.toggle("sig", passes(c)); b.setAttribute("aria-label", describe(m, cat, c)); });
+  };
+  noise.addEventListener("input", render); render();
+  addEventListener("scroll", onScroll, { passive: true });
+  $(".hm-wrap").addEventListener("scroll", onScroll, { passive: true });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How Certain Is the Chatbot Arena Leaderboard?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="STAT 236 project: how reliable are Chatbot Arena's rank spreads, which corrections fix them, and are category specialties real?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* Layout: a leaderboard you can interrogate. One reading column (about 68ch) with wide figure bands that break out
+   of it; every chart is drawn from the committed results. Display: Schibsted Grotesk; body: Source Serif 4;
+   ranks, ratings and counts: JetBrains Mono. Series colors are the report's: Arena blue, Bonferroni orange, Holm aqua. */
+:root {
+  --paper: #f5f6f8; --surface: #ffffff; --ink: #121722; --ink-2: #485064; --muted: #7a8295;
+  --rule: #dde1e8; --track: #eaedf2; --chip: #e8ecf3;
+  --arena: #2a78d6; --bonf: #eb6834; --holm: #1baf7a; --neutral: #a3a9b5;
+  --hit: #c8d1df; --miss: #e34948; --neg: #2a78d6; --pos: #e34948; --mid: #eef0f3;
+  --display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --col: 68ch; --wide: 1080px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0f131b; --surface: #161c27; --ink: #e9edf4; --ink-2: #b3bbca; --muted: #8590a4;
+  --rule: #283143; --track: #1f2736; --chip: #232c3c;
+  --arena: #3987e5; --bonf: #d95926; --holm: #199e70; --neutral: #687286;
+  --hit: #334059; --miss: #e66767; --neg: #3987e5; --pos: #e66767; --mid: #1f2533; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #0f131b; --surface: #161c27; --ink: #e9edf4; --ink-2: #b3bbca; --muted: #8590a4;
+  --rule: #283143; --track: #1f2736; --chip: #232c3c;
+  --arena: #3987e5; --bonf: #d95926; --holm: #199e70; --neutral: #687286;
+  --hit: #334059; --miss: #e66767; --neg: #3987e5; --pos: #e66767; --mid: #1f2533; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 0.18em; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--arena); outline-offset: 2px; border-radius: 3px; }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: var(--wide); margin: 0 auto; }
+.col { max-width: var(--col); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-weight: 800; font-size: clamp(2.1rem, 5.4vw, 3.6rem); line-height: 1.04; letter-spacing: -0.025em; }
+h2 { font-weight: 700; font-size: clamp(1.55rem, 3vw, 2.1rem); line-height: 1.15; }
+h3 { font-weight: 700; font-size: 1.05rem; line-height: 1.3; }
+p { margin: 0; }
+.eyebrow { font-family: var(--display); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.2rem; line-height: 1.55; color: var(--ink-2); }
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.small { font-size: 0.9rem; color: var(--ink-2); }
+.cap { font-family: var(--display); font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+
+/* top bar */
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem 1.5rem;
+  padding-block: 1.1rem; border-bottom: 1px solid var(--rule); font-family: var(--display); font-size: 0.88rem; color: var(--ink-2); }
+.top nav { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+.top strong { color: var(--ink); font-weight: 700; }
+
+section { padding-block: clamp(2.5rem, 6vw, 4.5rem); border-bottom: 1px solid var(--rule); }
+section:last-of-type { border-bottom: 0; }
+.sec-head { display: grid; gap: 0.7rem; margin-bottom: 1.6rem; }
+
+/* hero */
+.hero { padding-top: clamp(2rem, 5vw, 3.5rem); }
+.hero-grid { display: grid; gap: 1.4rem; }
+.hero-top { display: grid; gap: 1.6rem 3rem; align-items: end; }
+@media (min-width: 960px) { .hero-top { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
+.glance { display: grid; gap: 0.9rem; border-left: 2px solid var(--ink); padding-left: 1.2rem; align-content: end; }
+.glance .g { display: grid; gap: 0.1rem; }
+@media (min-width: 600px) and (max-width: 959px) { .glance { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem;
+  border-left: 0; padding-left: 0; border-top: 2px solid var(--ink); padding-top: 0.9rem; } .glance .g { align-content: start; } }
+.glance .gv { font: 600 1.45rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.glance .gq { font: 700 0.72rem var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.glance .gk { font-family: var(--display); font-size: 0.86rem; color: var(--ink-2); line-height: 1.35; }
+.hero h1 .q { color: var(--muted); font-weight: 700; }
+.spread-tag { white-space: nowrap; font-family: var(--mono); font-weight: 600; background: var(--chip); padding: 0.05em 0.35em; border-radius: 4px; }
+
+/* segmented control */
+.seg { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.seg button { font: 600 0.88rem/1 var(--display); color: var(--ink-2); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.45rem; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.seg button .sw { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--c, var(--neutral)); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.seg button:hover { border-color: var(--ink-2); }
+
+/* leaderboard */
+.board-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1rem 0.8rem; }
+.board-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.8rem 1.4rem;
+  padding-block: 0.4rem 0.9rem; border-bottom: 1px solid var(--rule); margin-bottom: 0.4rem; }
+.metric { display: grid; gap: 0.1rem; align-content: start; }
+.board-meta { grid-template-rows: auto auto auto; }
+.board-meta .metric { grid-row: span 3; grid-template-rows: subgrid; }
+.metric .k { font: 600 0.72rem/1.2 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.metric .v { font: 600 1.35rem/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.metric .d { font-family: var(--display); font-size: 0.78rem; color: var(--ink-2); }
+.proc-note { font-family: var(--display); font-size: 0.9rem; color: var(--ink-2); min-height: 2.6em; padding-top: 0.6rem; }
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 4.2rem minmax(0, 15rem) 5.6rem minmax(0, 1fr); align-items: center;
+  gap: 0.75rem; padding-block: 0.28rem; border-bottom: 1px solid var(--track); }
+.row:last-child { border-bottom: 0; }
+.row .rk { font: 600 0.92rem var(--mono); font-variant-numeric: tabular-nums; }
+.row .nm { font: 500 0.92rem var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sc { font: 400 0.8rem var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.trk { position: relative; height: 0.9rem; background: var(--track); border-radius: 999px; }
+.bar { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--c, var(--arena));
+  transition: left 0.45s cubic-bezier(.2,.7,.2,1), width 0.45s cubic-bezier(.2,.7,.2,1), background 0.3s; }
+.axis { display: grid; grid-template-columns: 4.2rem minmax(0, 15rem) 5.6rem minmax(0, 1fr); gap: 0.75rem;
+  font: 400 0.72rem var(--mono); color: var(--muted); padding-bottom: 0.3rem; }
+.axis .ticks { position: relative; height: 1.1rem; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+.axis .lbl { font-family: var(--display); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.66rem; }
+.board-foot { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; justify-content: space-between; align-items: center; padding-top: 0.8rem; }
+.linkbtn { font: 600 0.86rem var(--display); background: none; border: 0; color: var(--ink); text-decoration: underline;
+  text-underline-offset: 0.2em; text-decoration-color: var(--muted); cursor: pointer; padding: 0; }
+button.row { width: 100%; font: inherit; color: inherit; text-align: left; background: none; border: 0;
+  border-bottom: 1px solid var(--track); cursor: pointer; border-radius: 0; }
+button.row:hover { background: var(--paper); }
+button.row[aria-expanded="true"] { background: var(--paper); border-bottom-color: transparent; }
+button.row[aria-expanded="true"] .nm { font-weight: 700; }
+button.row:focus-visible { outline-offset: -2px; }
+.cmp { background: var(--paper); border-bottom: 1px solid var(--track); padding: 0.2rem 0 0.55rem; }
+.cmp .row { border-bottom: 0; padding-block: 0.16rem; }
+.cmp .row .nm { font-size: 0.82rem; color: var(--ink-2); display: inline-flex; align-items: center; gap: 0.4rem; }
+.cmp .row .nm i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--c); flex: none; }
+.cmp .row .rk { font-size: 0.82rem; color: var(--ink-2); }
+.cmp .row.on .nm, .cmp .row.on .rk { color: var(--ink); font-weight: 700; }
+.cmp .trk { height: 0.6rem; }
+.cmp .hint { font-family: var(--display); font-size: 0.78rem; color: var(--muted); padding: 0.1rem 0 0.25rem; }
+.howto { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1.2rem; font-family: var(--display); font-size: 0.82rem; color: var(--ink-2); padding-bottom: 0.6rem; }
+.howto .ex { display: inline-flex; align-items: center; gap: 0.45rem; }
+.howto .ex b { display: inline-block; width: 3.2rem; height: 0.6rem; border-radius: 999px; background: var(--c, var(--arena)); }
+.row, .axis { padding-inline: 0.3rem; }
+@media (max-width: 640px) {
+  .row, .axis { grid-template-columns: 2.9rem minmax(0, 1.25fr) minmax(0, 1fr); gap: 0.5rem; }
+  .row .sc, .axis .sc-h { display: none; }
+  .row .nm { font-size: 0.84rem; }
+  .board-card { padding-inline: 0.7rem; }
+  .board-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+  .metric .v { font-size: 1.1rem; }
+}
+
+/* explainer */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.4rem 2.6rem; }
+.rule-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.1rem 1.2rem; display: grid; gap: 0.6rem; }
+.formula { font-family: var(--mono); font-size: 0.9rem; line-height: 1.7; overflow-x: auto; white-space: nowrap; }
+.err { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.7rem; align-items: start; }
+.err .sign { font: 800 1.3rem/1 var(--display); color: var(--muted); padding-top: 0.15rem; }
+
+/* waffles */
+.waffles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 2rem 3rem; }
+.waffle-block { display: grid; gap: 0.7rem; }
+.waffle-num { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.waffle-num .big { font: 700 clamp(2.4rem, 6vw, 3.4rem)/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.waffle-num .of { font: 500 1rem var(--display); color: var(--ink-2); }
+.waffle { display: grid; grid-template-columns: repeat(40, minmax(0, 1fr)); gap: 2px; max-width: 30rem; }
+.waffle i { display: block; aspect-ratio: 1; background: var(--hit); border-radius: 1px; }
+.waffle i.x { background: var(--miss); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--display); font-size: 0.82rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.legend i { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+
+/* dial */
+.dial { display: grid; gap: 1.2rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem; }
+.dial-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem 2rem; align-items: end; }
+.slider { display: grid; gap: 0.4rem; }
+.slider label { font: 600 0.88rem var(--display); }
+.slider .zval { font: 700 1.9rem/1 var(--mono); }
+input[type=range] { width: 100%; accent-color: var(--ink); }
+.marks { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.marks button { font: 600 0.78rem var(--display); border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2);
+  border-radius: 999px; padding: 0.3rem 0.65rem; cursor: pointer; }
+.marks button:hover { border-color: var(--ink-2); color: var(--ink); }
+.charts2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem 2rem; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--display); fill: var(--ink-2); }
+svg .num { font-family: var(--mono); }
+.gridline { stroke: var(--rule); stroke-width: 1; }
+.axisline { stroke: var(--muted); stroke-width: 1; }
+.target { stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+/* procedure bars */
+.pbars { display: grid; gap: 0.35rem; }
+.pbar { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 7.5rem; gap: 0.8rem; align-items: center; }
+.pbar .nm { font: 600 0.9rem var(--display); }
+.pbar .tr { height: 1.15rem; position: relative; }
+.pbar .tr b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--c, var(--neutral)); }
+.pbar .vv { font: 400 0.82rem var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .pbar { grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 0.6rem; margin-bottom: 0.35rem; }
+  .pbar .nm { grid-column: 1; grid-row: 1; } .pbar .vv { grid-column: 2; grid-row: 1; } .pbar .tr { grid-column: 1 / -1; grid-row: 2; height: 0.8rem; }
+}
+
+/* stress table */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-family: var(--display); font-size: 0.9rem; }
+th, td { text-align: right; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 700; font-size: 0.74rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); }
+td .pill { display: inline-block; min-width: 4.4rem; padding: 0.12rem 0.45rem; border-radius: 4px; text-align: right; }
+td .low { background: color-mix(in srgb, var(--miss) 18%, transparent); color: var(--ink); }
+@media (max-width: 560px) { th, td { padding: 0.45rem 0.25rem; } th { font-size: 0.66rem; letter-spacing: 0.04em; }
+  td .pill { min-width: 3.5rem; padding-inline: 0.3rem; } table { font-size: 0.82rem; } }
+
+/* heatmap */
+.hm-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem 2rem; align-items: end; margin-bottom: 1rem; }
+.hm-count { font: 700 1.9rem/1 var(--mono); }
+.hm-wrap { overflow-x: auto; }
+.hm { display: grid; grid-template-columns: minmax(9rem, 14rem) repeat(8, minmax(2.4rem, 1fr)); gap: 2px; min-width: 32rem; }
+.hm .h { font: 600 0.72rem/1.15 var(--display); color: var(--muted); text-align: center; padding-bottom: 0.35rem; align-self: end; }
+.hm .m { font: 500 0.78rem/1.2 var(--display); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center;
+  position: sticky; left: 0; z-index: 1; background: var(--paper); height: 100%; display: flex; align-items: center; padding-right: 0.3rem; }
+.hm .h .s { display: none; }
+.hm .corner { position: sticky; left: 0; z-index: 1; background: var(--paper); align-self: stretch; }
+@media (max-width: 640px) {
+  .hm { grid-template-columns: minmax(7.6rem, 8.6rem) repeat(8, minmax(2.3rem, 1fr)); min-width: 28rem; }
+  .hm .m { font-size: 0.7rem; }
+  .hm .h .f { display: none; } .hm .h .s { display: inline; }
+}
+.hm .c { position: relative; height: 1.25rem; border-radius: 2px; background: var(--mid); border: 0; padding: 0; cursor: default; }
+.hm .c.sig::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0.36rem; height: 0.36rem; margin: -0.18rem;
+  border-radius: 50%; background: var(--ink); }
+.hm .c.na { background: transparent; outline: 1px dashed var(--rule); outline-offset: -1px; }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--paper); font: 500 0.8rem/1.4 var(--display);
+  padding: 0.5rem 0.65rem; border-radius: 6px; max-width: 16rem; }
+.tip .num { font-family: var(--mono); }
+.scale { display: flex; align-items: center; gap: 0.5rem; font: 400 0.75rem var(--mono); color: var(--muted); }
+.scale .grad { width: 9rem; height: 0.55rem; border-radius: 3px; }
+
+/* short answers and method steps */
+.answer { font-size: 1.12rem; line-height: 1.5; color: var(--ink); border-left: 3px solid var(--c, var(--ink)); padding-left: 0.9rem; }
+.answer strong { font-weight: 600; }
+.steps { list-style: none; margin: 0 0 2rem; padding: 0; display: grid; gap: 1rem 1.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); counter-reset: st; }
+.steps li { counter-increment: st; border-top: 2px solid var(--ink); padding-top: 0.6rem; display: grid; gap: 0.25rem; align-content: start; }
+.steps li::before { content: counter(st); font: 700 0.8rem var(--mono); color: var(--muted); }
+.steps strong { font: 700 0.98rem/1.3 var(--display); }
+.steps span { font-size: 0.92rem; line-height: 1.5; color: var(--ink-2); }
+.theme-btn { font: 600 0.88rem var(--display); color: var(--ink-2); background: none; border: 1px solid var(--rule);
+  border-radius: 999px; padding: 0.2rem 0.7rem; cursor: pointer; }
+.theme-btn:hover { color: var(--ink); border-color: var(--ink-2); }
+
+/* takeaways */
+.takeaways { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.4rem 2rem; }
+.tk { display: grid; gap: 0.4rem; align-content: start; }
+.tk .n { font: 700 0.8rem var(--mono); color: var(--muted); }
+footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88rem; color: var(--ink-2); display: grid; gap: 0.8rem; }
+.refs { font-size: 0.84rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><strong>STAT 236 · Fall 2026</strong> · Harry Hu, Chloe Yu, Ender Yang, Chenxi Ge</div>
+    <nav>
+      <a href="https://github.com/chenxige0509/stat236-arena-uncertainty/blob/main/report/report.pdf">Report (PDF)</a>
+      <a href="https://github.com/chenxige0509/stat236-arena-uncertainty">Code and data</a>
+      <button class="theme-btn" id="theme-btn" type="button"></button>
+    </nav>
+  </header>
+
+  <!-- ============================================================ hero -->
+  <section class="hero" aria-labelledby="h-hero">
+    <div class="hero-grid">
+      <div class="hero-top">
+      <div class="stack col">
+        <p class="eyebrow">Chatbot Arena · Bradley–Terry · multiple testing</p>
+        <h1 id="h-hero">How certain is the Chatbot&nbsp;Arena leaderboard?</h1>
+        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing 129 models at once. We measured how often it is right, which corrections fix it, and what they cost.</p>
+      </div>
+      <div class="glance" aria-label="Main findings">
+        <div class="g"><span class="gq">Q1</span><span class="gv">90.9%</span><span class="gk">of simulated leaderboards have all 129 rank spreads right. The target is 95%.</span></div>
+        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width with pairwise tests and Holm's correction, the narrowest valid fix we found (Bonferroni: 13.6).</span></div>
+        <div class="g"><span class="gq">Q3</span><span class="gv">275 of 958</span><span class="gk">model–category pairs pass Bonferroni as specialties, if our null's noise level is right.</span></div>
+      </div>
+      </div>
+      <div class="board-card">
+        <div class="seg" role="group" aria-label="Procedure used to compute the rank intervals" id="seg-board"></div>
+        <p class="proc-note" id="proc-note"></p>
+        <div class="board-meta" id="board-meta"></div>
+        <p class="howto" id="howto"><span class="ex"><b id="howto-bar"></b>one bar = the ranks a model could hold under the chosen procedure; longer means less certain</span><span>Click a model to compare all four procedures.</span></p>
+        <div class="axis" aria-hidden="true"><span class="lbl">Rank</span><span class="lbl">Model</span><span class="lbl sc-h" style="text-align:right">Rating</span><div class="ticks" id="ticks"></div></div>
+        <div class="rows" id="rows"></div>
+        <div class="board-foot">
+          <p class="cap">The real 2024-08-12 board (129 models), refit from the public battle data. Rating column: Arena's rating ± its 95% interval. The simulation figures above come from Q1 and Q2 below.</p>
+          <button class="linkbtn" id="toggle-all" type="button">Show all 129 models</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ the rule -->
+  <section aria-labelledby="h-rule">
+    <div class="sec-head col">
+      <p class="eyebrow">Step 0 · What the site computes</p>
+      <h2 id="h-rule">A rank spread is read off overlapping score intervals</h2>
+    </div>
+    <div class="two">
+      <div class="stack col">
+        <p>Each model gets a Bradley–Terry rating and a 95% interval. Its best rank is one plus the number of models whose whole interval sits above its own; its worst rank is one plus the number whose interval reaches above its lower end. We refit the public 2024 battle data with Arena's own code and matched the published ratings to a median of 0.06 points. On today's site every interval on all 4,773 published 2026 text boards is exactly the rating ± 1.96 standard errors, and the formula reproduces both ends of the displayed spread for all 59 models we recorded.</p>
+        <p>The original Arena paper says a ranking needs intervals that hold <em>simultaneously</em>. The site's intervals hold one model at a time. That creates two errors that pull in opposite directions.</p>
+      </div>
+      <div class="rule-box" aria-label="The two errors">
+        <div class="formula">best&nbsp;&nbsp;= 1 + #{ models with L &gt; my U }<br>worst = 1 + #{ others with U &gt; my L }</div>
+        <div class="err"><span class="sign">−</span><p class="small"><strong>Too narrow.</strong> 5% of 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
+        <div class="err"><span class="sign">+</span><p class="small"><strong>Too cautious.</strong> Two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ Q1 -->
+  <section aria-labelledby="h-q1">
+    <div class="sec-head col">
+      <p class="eyebrow">Q1 · Diagnosis</p>
+      <h2 id="h-q1">How often is the whole table of rank spreads right?</h2>
+      <p class="answer">In 90.9% of simulated leaderboards, a little short of the 95% target. The two errors above almost cancel.</p>
+      <p>We cannot check real ranks against the truth, so we built a world where the truth is known. Each square below is one simulated leaderboard.</p>
+    </div>
+    <ol class="steps" aria-label="How the simulation works">
+      <li><strong>Fix a true world</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
+      <li><strong>Replay the battles</strong><span>Keep every real matchup and redraw who won (or tied) from the true win probabilities.</span></li>
+      <li><strong>Rerun the method</strong><span>Refit, build Arena's intervals and rank spreads, and the corrected versions for Q2.</span></li>
+      <li><strong>Score it, 1,000 times</strong><span>Check every interval against the known truth. Coverage is the share of datasets in which all 129 hold.</span></li>
+    </ol>
+    <div class="waffles">
+      <div class="waffle-block">
+        <div class="waffle-num"><span class="big" id="w1-n"></span><span class="of">of 1,000 datasets</span></div>
+        <h3>All 129 score intervals contain the true score</h3>
+        <div class="waffle" id="waffle-ci" role="img"></div>
+        <p class="small">Each interval is right <span id="ci-each"></span> of the time on its own, but <span id="miss-rep"></span> of 129 miss in a typical dataset.</p>
+      </div>
+      <div class="waffle-block">
+        <div class="waffle-num"><span class="big" id="w2-n"></span><span class="of">of 1,000 datasets</span></div>
+        <h3>All 129 rank spreads contain the true rank</h3>
+        <div class="waffle" id="waffle-rs" role="img"></div>
+        <p class="small">A missed score interval rarely moves a rank. Each spread is right <span id="rs-each"></span> of the time, and the whole table 90.9% (target: 95%).</p>
+      </div>
+    </div>
+    <div class="legend" style="margin-top:1.2rem"><span><i style="background:var(--hit)"></i>every interval right</span><span><i style="background:var(--miss)"></i>at least one wrong</span></div>
+    <p class="col small" style="margin-top:1.4rem">Nothing in Arena's method targets the 90.9%; it depends on how many models happen to be nearly tied (see the stress test in Q2). Which ranks are shaky? Crowding matters most: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
+  </section>
+
+  <!-- ============================================================ Q2 -->
+  <section aria-labelledby="h-q2">
+    <div class="sec-head col">
+      <p class="eyebrow">Q2 · Repair</p>
+      <h2 id="h-q2">Which correction fixes the spreads, and what does it cost?</h2>
+      <p class="answer" style="--c:var(--holm)">Testing each pair of models directly, with Holm's step-down correction. Its spreads held in all 1,000 datasets at a mean width of 11.3 ranks, against 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper.</p>
+      <p>First, how wide do the spreads need to be? Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. Drag the multiplier, or use the three buttons, and see what the whole leaderboard does across the same 1,000 simulated datasets.</p>
+    </div>
+    <div class="dial">
+      <div class="dial-top">
+        <div class="slider">
+          <label for="zdial">Interval multiplier <em>z</em></label>
+          <div class="zval num" id="zval"></div>
+          <input type="range" id="zdial" min="0" max="1" step="1" value="0" aria-describedby="z-readout">
+          <div class="marks" id="zmarks"></div>
+        </div>
+        <div class="metric"><span class="k">All 129 rank spreads right</span><span class="v" id="z-cover"></span><span class="d" id="z-readout"></span></div>
+        <div class="metric"><span class="k">Mean width of a rank spread</span><span class="v" id="z-width"></span><span class="d">ranks</span></div>
+      </div>
+      <div class="charts2">
+        <figure style="margin:0"><svg id="ch-cover" viewBox="0 0 420 230" role="img" aria-label="Share of datasets with all rank spreads right, against z"></svg><figcaption class="cap">All 129 rank spreads right, by <em>z</em>. Dashed: the 95% target.</figcaption></figure>
+        <figure style="margin:0"><svg id="ch-width" viewBox="0 0 420 230" role="img" aria-label="Mean rank spread width against z"></svg><figcaption class="cap">Mean width of a rank spread, in ranks.</figcaption></figure>
+      </div>
+      <p class="small">The smallest <em>z</em> that reaches 95% is about 2.1. That choice uses the true ranks, so no real procedure can make it; it shows how little extra width the table actually needs.</p>
+    </div>
+
+    <div class="two" style="margin-top:2.6rem">
+      <div class="stack col">
+        <h3>Six valid fixes, very different prices</h3>
+        <p>Every correction below keeps all 129 rank intervals right in all 1,000 datasets. They differ in how much width they spend doing it. The χ² set from the original Arena paper protects every linear combination of the 129 scores, far more than a ranking needs. A ranking only needs the sign of each pairwise difference, so testing each pair of models directly is cheaper, and Holm's step-down procedure is the cheapest.</p>
+        <p class="small">Holm sorts the 8,256 pairs by |<em>z</em>| of their rating gap. The largest must clear the Bonferroni bar of 4.52; each rejection lowers the bar for the rest, down to 3.96 on average here because thousands of pairs are clear-cut. A one-sided version of Holm, whose control of wrong orderings is fully proven, never goes below 4.38 and needs 12.4 ranks.</p>
+      </div>
+      <div class="pbars" id="pbars" aria-label="Mean rank interval width by procedure"></div>
+    </div>
+
+    <div style="margin-top:2.6rem" class="stack">
+      <h3 class="col">Stress test: what happens when models are tied?</h3>
+      <p class="col">The real 2024 strengths have few near-ties, so every correction looks overly safe. We rebuilt the world with tied models, where the guarantees are actually tested. Share of 1,000 datasets in which all rank intervals are right:</p>
+      <div class="tbl-wrap"><table id="stress"></table></div>
+      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads collapse once ties exist. Holm stays above 95% everywhere; its guarantee is a theorem for exact ties, and the near-tie world, where no theorem applies, turns out to be easier.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ Q3 -->
+  <section aria-labelledby="h-q3">
+    <div class="sec-head col">
+      <p class="eyebrow">Q3 · Category leaderboards</p>
+      <h2 id="h-q3">Are category “specialties” real?</h2>
+      <p class="answer" style="--c:var(--pos)">Some clearly are, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry.</p>
+      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject “no specialties at all” with <em>p</em> = 0.002, the smallest value 500 null draws can give. The open question is how many pairs to flag.</p>
+    </div>
+    <div class="hm-controls">
+      <div class="slider">
+        <label for="noise">If the real noise is <span class="num" id="noise-v"></span> × what our null assumes</label>
+        <input type="range" id="noise" min="1" max="4" step="0.1" value="1">
+      </div>
+      <div class="metric"><span class="k">Bonferroni finds</span><span class="hm-count num" id="hm-count"></span><span class="d">of 958 pairs (dots below, for the top 40 models)</span></div>
+    </div>
+    <p class="cap col" style="margin-bottom:0.8rem">Each cell is one model in one category. Hover or tab to a cell for its numbers. The slider divides every <em>z</em>* by the noise factor and recounts the pairs above the Bonferroni bar of <span class="num" id="crit-v"></span>.</p>
+    <div class="hm-wrap"><div class="hm" id="hm" role="group" aria-label="Specialty of each model in each category. Use the arrow keys to move between cells."></div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem 1.6rem;margin-top:0.9rem;align-items:center">
+      <div class="scale"><span>−80</span><span class="grad" id="grad"></span><span>+80 rating points</span></div>
+      <div class="legend"><span><i style="background:var(--ink);border-radius:50%"></i>passes Bonferroni</span><span><i style="outline:1px dashed var(--muted);background:transparent"></i>under 200 battles, not tested</span></div>
+    </div>
+    <p class="col small" style="margin-top:1.2rem">Red: stronger in that category than overall; blue: weaker. The largest effects are about language. Llama 3 70B is 73 points weaker in Chinese than overall, while all nine Qwen models are 50–84 points stronger in Chinese, eight of them significantly. The null redraws every vote independently. On the real board the <em>z</em>* have a robust spread of 3.3 instead of 1, which could be real specialties or extra noise the null leaves out, such as many votes from the same user. If the noise were 2 or 3 times the null's, Bonferroni would flag 76 or 26 pairs; even at 4 times, seven remain, five of them about language.</p>
+  </section>
+
+  <!-- ============================================================ takeaways -->
+  <section aria-labelledby="h-take">
+    <div class="sec-head col"><p class="eyebrow">What we learned</p><h2 id="h-take">Takeaways</h2></div>
+    <div class="takeaways">
+      <div class="tk"><span class="n">Q1</span><h3>Nearly right by accident</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because two errors roughly cancel. Nothing in the method targets that number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
+      <div class="tk"><span class="n">Q2</span><h3>Test the pairs a ranking needs</h3><p class="small">A ranking only needs the signs of pairwise differences. Pairwise tests with Holm give valid spreads 18% narrower than Bonferroni and about three to four times narrower than the χ² set.</p></div>
+      <div class="tk"><span class="n">Real board</span><h3>223 orderings do not survive</h3><p class="small">Of the 7,808 “A beats B” statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
+      <div class="tk"><span class="n">Q3</span><h3>Specialties exist; counting them is harder</h3><p class="small">Language effects are large and unmistakable. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
+    </div>
+    <p class="col small" style="margin-top:1.8rem"><strong>Limits.</strong> The simulation treats battles as independent and strengths as fixed, uses one 2024 snapshot with 129 models (today's board has about 400), and relies on normal approximations. Correlated votes would likely lower Arena's coverage further.</p>
+  </section>
+
+  <footer>
+    <p>Data: the public LMSYS battle dump of 2024-08-14 (1.66 million battles after Arena's filter), the official 2024-08-12 leaderboard snapshot, and LMArena's 2026 <span class="mono">leaderboard-dataset</span>. Code: Arena's open-source <span class="mono">arena-rank</span> package plus our simulation, all in the <a href="https://github.com/chenxige0509/stat236-arena-uncertainty">project repository</a>; the <a href="https://github.com/chenxige0509/stat236-arena-uncertainty/blob/main/report/report.pdf">report</a> has the methods, proofs and full results.</p>
+    <p class="refs">Chiang et al. (2024), Chatbot Arena, ICML · LMArena (2025), Arena's ranking method · Holm (1979) · Benjamini &amp; Hochberg (1995) · Donoho &amp; Jin (2004, 2015) · Mogstad, Romano, Shaikh &amp; Wilhelm (2024).</p>
+  </footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const D = {"board":[{"m":"chatgpt-4o-latest","r":1202.6,"ci":5.1,"n":11541,"arena":[1,1],"bonferroni":[1,2],"holm":[1,1],"holm_onesided":[1,1],"pairwise_bonferroni":[1,1],"chi2_scheffe":[1,4],"chi2":[1,10]},{"m":"gemini-1.5-pro-exp-0801","r":1186.7,"ci":4.1,"n":19038,"arena":[2,2],"bonferroni":[1,2],"holm":[2,2],"holm_onesided":[2,2],"pairwise_bonferroni":[2,2],"chi2_scheffe":[1,7],"chi2":[1,13]},{"m":"gpt-4o-2024-05-13","r":1174.8,"ci":2.2,"n":76507,"arena":[3,3],"bonferroni":[3,4],"holm":[3,3],"holm_onesided":[3,3],"pairwise_bonferroni":[3,3],"chi2_scheffe":[1,9],"chi2":[1,13]},{"m":"gpt-4o-mini-2024-07-18","r":1163.8,"ci":4.1,"n":18657,"arena":[4,5],"bonferroni":[3,8],"holm":[4,6],"holm_onesided":[4,8],"pairwise_bonferroni":[4,8],"chi2_scheffe":[1,17],"chi2":[1,20]},{"m":"claude-3-5-sonnet-20240620","r":1160.0,"ci":2.8,"n":46583,"arena":[4,6],"bonferroni":[4,8],"holm":[4,8],"holm_onesided":[4,8],"pairwise_bonferroni":[4,8],"chi2_scheffe":[2,17],"chi2":[1,20]},{"m":"gemini-advanced-0514","r":1155.2,"ci":2.6,"n":52155,"arena":[5,8],"bonferroni":[4,10],"holm":[4,9],"holm_onesided":[4,9],"pairwise_bonferroni":[4,9],"chi2_scheffe":[3,17],"chi2":[1,20]},{"m":"llama-3.1-405b-instruct","r":1152.7,"ci":4.2,"n":17838,"arena":[6,10],"bonferroni":[4,13],"holm":[5,12],"holm_onesided":[4,12],"pairwise_bonferroni":[4,12],"chi2_scheffe":[2,20],"chi2":[1,27]},{"m":"gemini-1.5-pro-api-0514","r":1148.8,"ci":2.3,"n":68392,"arena":[7,11],"bonferroni":[6,13],"holm":[6,13],"holm_onesided":[6,13],"pairwise_bonferroni":[6,13],"chi2_scheffe":[4,19],"chi2":[2,21]},{"m":"gpt-4o-2024-08-06","r":1148.0,"ci":6.2,"n":7396,"arena":[6,13],"bonferroni":[4,17],"holm":[5,16],"holm_onesided":[4,17],"pairwise_bonferroni":[4,17],"chi2_scheffe":[2,25],"chi2":[1,29]},{"m":"gemini-1.5-pro-api-0409-preview","r":1146.1,"ci":2.6,"n":55654,"arena":[7,12],"bonferroni":[6,15],"holm":[7,13],"holm_onesided":[7,14],"pairwise_bonferroni":[7,14],"chi2_scheffe":[4,20],"chi2":[2,25]},{"m":"gpt-4-turbo-2024-04-09","r":1145.3,"ci":2.1,"n":83806,"arena":[8,12],"bonferroni":[7,15],"holm":[7,13],"holm_onesided":[7,14],"pairwise_bonferroni":[7,14],"chi2_scheffe":[4,20],"chi2":[4,23]},{"m":"mistral-large-2407","r":1139.9,"ci":5.3,"n":10467,"arena":[9,17],"bonferroni":[7,18],"holm":[7,18],"holm_onesided":[7,18],"pairwise_bonferroni":[7,18],"chi2_scheffe":[3,26],"chi2":[1,29]},{"m":"gpt-4-1106-preview","r":1139.7,"ci":2.0,"n":92125,"arena":[12,16],"bonferroni":[9,17],"holm":[11,16],"holm_onesided":[9,17],"pairwise_bonferroni":[9,17],"chi2_scheffe":[4,20],"chi2":[4,27]},{"m":"athene-70b-0725","r":1137.5,"ci":5.3,"n":10754,"arena":[11,17],"bonferroni":[7,19],"holm":[8,18],"holm_onesided":[8,18],"pairwise_bonferroni":[8,18],"chi2_scheffe":[4,28],"chi2":[1,30]},{"m":"claude-3-opus-20240229","r":1136.5,"ci":1.7,"n":155254,"arena":[12,17],"bonferroni":[11,17],"holm":[11,17],"holm_onesided":[11,17],"pairwise_bonferroni":[11,17],"chi2_scheffe":[7,21],"chi2":[4,27]},{"m":"gpt-4-0125-preview","r":1134.3,"ci":2.1,"n":85518,"arena":[13,17],"bonferroni":[11,18],"holm":[13,18],"holm_onesided":[11,18],"pairwise_bonferroni":[11,18],"chi2_scheffe":[7,23],"chi2":[4,28]},{"m":"llama-3.1-70b-instruct","r":1133.0,"ci":4.9,"n":12608,"arena":[12,18],"bonferroni":[9,19],"holm":[11,18],"holm_onesided":[11,19],"pairwise_bonferroni":[11,19],"chi2_scheffe":[4,28],"chi2":[2,31]},{"m":"yi-large-preview","r":1128.5,"ci":2.6,"n":51739,"arena":[17,18],"bonferroni":[14,19],"holm":[14,19],"holm_onesided":[14,19],"pairwise_bonferroni":[14,19],"chi2_scheffe":[8,27],"chi2":[4,28]},{"m":"gemini-1.5-flash-api-0514","r":1115.9,"ci":2.5,"n":55431,"arena":[19,20],"bonferroni":[19,23],"holm":[19,22],"holm_onesided":[19,22],"pairwise_bonferroni":[19,22],"chi2_scheffe":[13,28],"chi2":[8,32]},{"m":"reka-core-20240722","r":1115.7,"ci":6.9,"n":6108,"arena":[19,23],"bonferroni":[16,27],"holm":[18,24],"holm_onesided":[17,25],"pairwise_bonferroni":[17,26],"chi2_scheffe":[4,38],"chi2":[4,43]},{"m":"deepseek-v2-api-0628","r":1107.6,"ci":4.4,"n":15574,"arena":[20,24],"bonferroni":[19,28],"holm":[19,27],"holm_onesided":[19,27],"pairwise_bonferroni":[19,27],"chi2_scheffe":[12,35],"chi2":[7,39]},{"m":"gemma-2-27b-it","r":1105.9,"ci":3.4,"n":27087,"arena":[20,25],"bonferroni":[19,27],"holm":[20,27],"holm_onesided":[20,27],"pairwise_bonferroni":[20,27],"chi2_scheffe":[14,32],"chi2":[10,39]},{"m":"deepseek-coder-v2-0724","r":1104.1,"ci":8.8,"n":3498,"arena":[20,28],"bonferroni":[19,31],"holm":[19,31],"holm_onesided":[19,31],"pairwise_bonferroni":[19,31],"chi2_scheffe":[4,46],"chi2":[4,57]},{"m":"yi-large","r":1101.4,"ci":4.2,"n":16672,"arena":[21,27],"bonferroni":[20,29],"holm":[20,29],"holm_onesided":[20,29],"pairwise_bonferroni":[20,29],"chi2_scheffe":[14,38],"chi2":[10,41]},{"m":"nemotron-4-340b-instruct","r":1097.9,"ci":3.9,"n":20669,"arena":[23,29],"bonferroni":[20,31],"holm":[21,30],"holm_onesided":[21,31],"pairwise_bonferroni":[20,31],"chi2_scheffe":[17,38],"chi2":[13,41]},{"m":"bard-jan-24-gemini-pro","r":1097.5,"ci":5.6,"n":11827,"arena":[22,29],"bonferroni":[20,31],"holm":[21,31],"holm_onesided":[20,31],"pairwise_bonferroni":[20,31],"chi2_scheffe":[13,40],"chi2":[8,47]},{"m":"glm-4-0520","r":1095.5,"ci":5.3,"n":10239,"arena":[23,31],"bonferroni":[20,31],"holm":[21,31],"holm_onesided":[21,31],"pairwise_bonferroni":[21,31],"chi2_scheffe":[15,40],"chi2":[9,47]},{"m":"llama-3-70b-instruct","r":1095.0,"ci":1.7,"n":161465,"arena":[24,29],"bonferroni":[23,31],"holm":[23,29],"holm_onesided":[23,29],"pairwise_bonferroni":[23,29],"chi2_scheffe":[20,35],"chi2":[17,39]},{"m":"claude-3-sonnet-20240229","r":1089.8,"ci":1.9,"n":113106,"arena":[28,31],"bonferroni":[24,31],"holm":[25,31],"holm_onesided":[25,31],"pairwise_bonferroni":[25,31],"chi2_scheffe":[20,39],"chi2":[19,41]},{"m":"reka-core-20240501","r":1088.3,"ci":2.4,"n":62688,"arena":[28,31],"bonferroni":[24,31],"holm":[26,31],"holm_onesided":[25,31],"pairwise_bonferroni":[25,31],"chi2_scheffe":[20,39],"chi2":[18,41]},{"m":"reka-flash-20240722","r":1087.7,"ci":6.6,"n":6282,"arena":[25,31],"bonferroni":[22,37],"holm":[23,36],"holm_onesided":[23,37],"pairwise_bonferroni":[23,37],"chi2_scheffe":[16,46],"chi2":[9,58]},{"m":"command-r-plus","r":1078.7,"ci":2.1,"n":80911,"arena":[32,36],"bonferroni":[31,38],"holm":[31,37],"holm_onesided":[31,37],"pairwise_bonferroni":[31,37],"chi2_scheffe":[22,41],"chi2":[20,45]},{"m":"qwen2-72b-instruct","r":1076.2,"ci":3.1,"n":34067,"arena":[32,37],"bonferroni":[31,38],"holm":[31,38],"holm_onesided":[31,38],"pairwise_bonferroni":[31,38],"chi2_scheffe":[21,43],"chi2":[20,49]},{"m":"gemma-2-9b-it","r":1076.1,"ci":3.5,"n":24866,"arena":[32,37],"bonferroni":[31,39],"holm":[31,38],"holm_onesided":[31,38],"pairwise_bonferroni":[31,38],"chi2_scheffe":[21,45],"chi2":[20,51]},{"m":"gpt-4-0314","r":1075.0,"ci":2.5,"n":55979,"arena":[32,37],"bonferroni":[31,39],"holm":[31,38],"holm_onesided":[31,38],"pairwise_bonferroni":[31,38],"chi2_scheffe":[23,43],"chi2":[20,48]},{"m":"qwen-max-0428","r":1072.1,"ci":3.5,"n":25748,"arena":[33,39],"bonferroni":[31,39],"holm":[32,39],"holm_onesided":[31,39],"pairwise_bonferroni":[31,39],"chi2_scheffe":[23,45],"chi2":[20,56]},{"m":"glm-4-0116","r":1071.8,"ci":6.2,"n":7579,"arena":[32,39],"bonferroni":[31,41],"holm":[31,40],"holm_onesided":[31,40],"pairwise_bonferroni":[31,40],"chi2_scheffe":[20,55],"chi2":[15,64]},{"m":"claude-3-haiku-20240307","r":1067.2,"ci":1.9,"n":109526,"arena":[36,39],"bonferroni":[34,40],"holm":[36,39],"holm_onesided":[36,40],"pairwise_bonferroni":[36,40],"chi2_scheffe":[28,46],"chi2":[23,50]},{"m":"deepseek-coder-v2","r":1067.1,"ci":4.4,"n":15801,"arena":[36,39],"bonferroni":[32,41],"holm":[33,40],"holm_onesided":[33,40],"pairwise_bonferroni":[33,40],"chi2_scheffe":[22,54],"chi2":[20,60]},{"m":"llama-3.1-8b-instruct","r":1056.1,"ci":5.1,"n":11583,"arena":[40,43],"bonferroni":[37,46],"holm":[38,46],"holm_onesided":[37,46],"pairwise_bonferroni":[37,46],"chi2_scheffe":[26,59],"chi2":[20,73]},{"m":"reka-flash-preview-20240611","r":1053.9,"ci":3.9,"n":20477,"arena":[40,43],"bonferroni":[38,46],"holm":[40,46],"holm_onesided":[40,46],"pairwise_bonferroni":[40,46],"chi2_scheffe":[30,58],"chi2":[23,68]},{"m":"gpt-4-0613","r":1051.2,"ci":2.0,"n":89251,"arena":[40,44],"bonferroni":[40,46],"holm":[40,46],"holm_onesided":[40,46],"pairwise_bonferroni":[40,46],"chi2_scheffe":[33,57],"chi2":[29,60]},{"m":"qwen1.5-110b-chat","r":1050.4,"ci":3.3,"n":27508,"arena":[40,46],"bonferroni":[40,47],"holm":[40,46],"holm_onesided":[40,46],"pairwise_bonferroni":[40,46],"chi2_scheffe":[31,59],"chi2":[27,69]},{"m":"mistral-large-2402","r":1046.0,"ci":2.3,"n":64938,"arena":[43,46],"bonferroni":[40,51],"holm":[40,48],"holm_onesided":[40,48],"pairwise_bonferroni":[40,48],"chi2_scheffe":[36,60],"chi2":[31,67]},{"m":"yi-1.5-34b-chat","r":1045.8,"ci":3.5,"n":25156,"arena":[42,47],"bonferroni":[40,53],"holm":[40,50],"holm_onesided":[40,52],"pairwise_bonferroni":[40,52],"chi2_scheffe":[33,61],"chi2":[28,73]},{"m":"reka-flash-21b-20240226-online","r":1044.5,"ci":4.4,"n":16056,"arena":[43,48],"bonferroni":[40,53],"holm":[40,53],"holm_onesided":[40,53],"pairwise_bonferroni":[40,53],"chi2_scheffe":[31,63],"chi2":[27,76]},{"m":"llama-3-8b-instruct","r":1040.7,"ci":1.9,"n":106732,"arena":[45,52],"bonferroni":[44,53],"holm":[44,53],"holm_onesided":[44,53],"pairwise_bonferroni":[44,53],"chi2_scheffe":[38,60],"chi2":[35,70]},{"m":"claude-1","r":1037.7,"ci":4.0,"n":21172,"arena":[46,53],"bonferroni":[43,54],"holm":[44,53],"holm_onesided":[44,53],"pairwise_bonferroni":[44,53],"chi2_scheffe":[38,66],"chi2":[29,80]},{"m":"command-r","r":1037.4,"ci":2.5,"n":56373,"arena":[47,53],"bonferroni":[44,53],"holm":[46,53],"holm_onesided":[45,53],"pairwise_bonferroni":[45,53],"chi2_scheffe":[38,64],"chi2":[35,74]},{"m":"mistral-medium","r":1036.6,"ci":3.0,"n":35555,"arena":[47,53],"bonferroni":[44,53],"holm":[45,53],"holm_onesided":[45,53],"pairwise_bonferroni":[45,53],"chi2_scheffe":[38,64],"chi2":[33,75]},{"m":"reka-flash-21b-20240226","r":1036.5,"ci":3.5,"n":25792,"arena":[47,53],"bonferroni":[44,54],"holm":[45,53],"holm_onesided":[45,53],"pairwise_bonferroni":[45,53],"chi2_scheffe":[38,65],"chi2":[32,78]},{"m":"qwen1.5-72b-chat","r":1036.1,"ci":2.8,"n":40643,"arena":[47,53],"bonferroni":[45,53],"holm":[46,53],"holm_onesided":[45,53],"pairwise_bonferroni":[45,53],"chi2_scheffe":[38,64],"chi2":[34,75]},{"m":"mixtral-8x22b-instruct-v0.1","r":1035.7,"ci":2.6,"n":49845,"arena":[48,53],"bonferroni":[45,53],"holm":[46,53],"holm_onesided":[46,53],"pairwise_bonferroni":[46,53],"chi2_scheffe":[38,64],"chi2":[35,75]},{"m":"claude-2.0","r":1020.6,"ci":5.1,"n":12774,"arena":[54,60],"bonferroni":[54,63],"holm":[54,61],"holm_onesided":[54,61],"pairwise_bonferroni":[54,61],"chi2_scheffe":[39,84],"chi2":[35,95]},{"m":"gemini-pro-dev-api","r":1020.0,"ci":4.2,"n":18790,"arena":[54,59],"bonferroni":[54,62],"holm":[54,60],"holm_onesided":[54,61],"pairwise_bonferroni":[54,61],"chi2_scheffe":[41,82],"chi2":[37,94]},{"m":"gemma-2-2b-it","r":1016.5,"ci":5.7,"n":9824,"arena":[54,61],"bonferroni":[54,68],"holm":[54,64],"holm_onesided":[54,65],"pairwise_bonferroni":[54,67],"chi2_scheffe":[40,90],"chi2":[35,98]},{"m":"zephyr-orpo-141b-A35b-v0.1","r":1016.2,"ci":7.9,"n":4858,"arena":[54,63],"bonferroni":[52,70],"holm":[54,68],"holm_onesided":[54,70],"pairwise_bonferroni":[54,70],"chi2_scheffe":[37,95],"chi2":[28,104]},{"m":"qwen1.5-32b-chat","r":1014.3,"ci":3.7,"n":22783,"arena":[54,61],"bonferroni":[54,66],"holm":[54,64],"holm_onesided":[54,65],"pairwise_bonferroni":[54,65],"chi2_scheffe":[46,86],"chi2":[40,94]},{"m":"mistral-next","r":1013.3,"ci":5.0,"n":12377,"arena":[54,63],"bonferroni":[54,70],"holm":[54,67],"holm_onesided":[54,68],"pairwise_bonferroni":[54,69],"chi2_scheffe":[42,91],"chi2":[38,98]},{"m":"phi-3-medium-4k-instruct","r":1011.8,"ci":3.7,"n":22099,"arena":[55,63],"bonferroni":[54,69],"holm":[54,66],"holm_onesided":[54,68],"pairwise_bonferroni":[54,69],"chi2_scheffe":[47,89],"chi2":[40,95]},{"m":"starling-lm-7b-beta","r":1007.5,"ci":4.4,"n":16667,"arena":[56,68],"bonferroni":[54,71],"holm":[55,70],"holm_onesided":[54,70],"pairwise_bonferroni":[54,70],"chi2_scheffe":[47,93],"chi2":[40,98]},{"m":"claude-2.1","r":1007.0,"ci":3.0,"n":37702,"arena":[58,67],"bonferroni":[54,70],"holm":[56,70],"holm_onesided":[56,70],"pairwise_bonferroni":[56,70],"chi2_scheffe":[54,90],"chi2":[45,95]},{"m":"gpt-3.5-turbo-0613","r":1005.8,"ci":3.0,"n":38959,"arena":[58,68],"bonferroni":[56,71],"holm":[56,70],"holm_onesided":[56,70],"pairwise_bonferroni":[56,70],"chi2_scheffe":[54,91],"chi2":[45,96]},{"m":"mixtral-8x7b-instruct-v0.1","r":1002.9,"ci":2.1,"n":76064,"arena":[61,70],"bonferroni":[57,71],"holm":[59,70],"holm_onesided":[58,71],"pairwise_bonferroni":[57,71],"chi2_scheffe":[54,91],"chi2":[52,95]},{"m":"yi-34b-chat","r":1000.1,"ci":4.5,"n":15946,"arena":[61,71],"bonferroni":[56,74],"holm":[58,74],"holm_onesided":[58,74],"pairwise_bonferroni":[57,74],"chi2_scheffe":[53,94],"chi2":[44,104]},{"m":"claude-instant-1","r":1000.1,"ci":4.1,"n":20633,"arena":[61,71],"bonferroni":[57,74],"holm":[60,74],"holm_onesided":[58,74],"pairwise_bonferroni":[58,74],"chi2_scheffe":[54,94],"chi2":[45,102]},{"m":"gemini-pro","r":999.4,"ci":7.0,"n":6565,"arena":[61,74],"bonferroni":[55,78],"holm":[56,74],"holm_onesided":[56,75],"pairwise_bonferroni":[56,76],"chi2_scheffe":[44,100],"chi2":[38,108]},{"m":"qwen1.5-14b-chat","r":997.4,"ci":4.0,"n":18666,"arena":[64,74],"bonferroni":[59,74],"holm":[61,74],"holm_onesided":[60,74],"pairwise_bonferroni":[60,74],"chi2_scheffe":[54,95],"chi2":[47,104]},{"m":"gpt-3.5-turbo-0314","r":995.1,"ci":8.5,"n":5655,"arena":[62,74],"bonferroni":[56,82],"holm":[58,81],"holm_onesided":[56,81],"pairwise_bonferroni":[56,81],"chi2_scheffe":[40,104],"chi2":[36,111]},{"m":"wizardlm-70b","r":995.0,"ci":6.2,"n":8391,"arena":[64,74],"bonferroni":[58,81],"holm":[61,77],"holm_onesided":[60,79],"pairwise_bonferroni":[58,80],"chi2_scheffe":[48,100],"chi2":[40,107]},{"m":"gpt-3.5-turbo-0125","r":994.5,"ci":2.3,"n":68914,"arena":[65,74],"bonferroni":[65,74],"holm":[65,74],"holm_onesided":[65,74],"pairwise_bonferroni":[65,74],"chi2_scheffe":[54,94],"chi2":[54,98]},{"m":"dbrx-instruct-preview","r":992.0,"ci":3.1,"n":33736,"arena":[67,74],"bonferroni":[65,80],"holm":[65,75],"holm_onesided":[65,76],"pairwise_bonferroni":[65,77],"chi2_scheffe":[54,96],"chi2":[54,104]},{"m":"phi-3-small-8k-instruct","r":990.4,"ci":4.1,"n":18505,"arena":[67,74],"bonferroni":[65,81],"holm":[65,79],"holm_onesided":[65,80],"pairwise_bonferroni":[65,80],"chi2_scheffe":[54,98],"chi2":[52,104]},{"m":"tulu-2-dpo-70b","r":988.2,"ci":6.8,"n":6660,"arena":[67,80],"bonferroni":[62,86],"holm":[65,81],"holm_onesided":[64,84],"pairwise_bonferroni":[64,84],"chi2_scheffe":[52,104],"chi2":[41,110]},{"m":"llama-2-70b-chat","r":981.9,"ci":2.9,"n":39631,"arena":[74,80],"bonferroni":[69,85],"holm":[71,82],"holm_onesided":[71,84],"pairwise_bonferroni":[70,85],"chi2_scheffe":[57,101],"chi2":[54,105]},{"m":"openchat-3.5-0106","r":980.3,"ci":4.8,"n":12987,"arena":[74,82],"bonferroni":[69,88],"holm":[71,86],"holm_onesided":[69,87],"pairwise_bonferroni":[69,88],"chi2_scheffe":[54,104],"chi2":[54,110]},{"m":"vicuna-33b","r":979.6,"ci":3.8,"n":22938,"arena":[74,82],"bonferroni":[70,88],"holm":[72,86],"holm_onesided":[71,87],"pairwise_bonferroni":[71,87],"chi2_scheffe":[57,102],"chi2":[54,106]},{"m":"snowflake-arctic-instruct","r":978.5,"ci":3.1,"n":34197,"arena":[74,82],"bonferroni":[71,88],"holm":[73,86],"holm_onesided":[73,87],"pairwise_bonferroni":[73,88],"chi2_scheffe":[60,102],"chi2":[54,105]},{"m":"starling-lm-7b-alpha","r":977.1,"ci":5.5,"n":10422,"arena":[74,84],"bonferroni":[69,90],"holm":[72,88],"holm_onesided":[71,88],"pairwise_bonferroni":[71,88],"chi2_scheffe":[54,105],"chi2":[54,111]},{"m":"nous-hermes-2-mixtral-8x7b-dpo","r":973.3,"ci":8.8,"n":3843,"arena":[74,88],"bonferroni":[69,96],"holm":[70,93],"holm_onesided":[70,94],"pairwise_bonferroni":[70,95],"chi2_scheffe":[54,111],"chi2":[43,116]},{"m":"gemma-1.1-7b-it","r":972.4,"ci":3.6,"n":25095,"arena":[76,86],"bonferroni":[74,91],"holm":[76,88],"holm_onesided":[74,89],"pairwise_bonferroni":[74,91],"chi2_scheffe":[63,104],"chi2":[54,110]},{"m":"llama2-70b-steerlm-chat","r":969.3,"ci":9.4,"n":3636,"arena":[76,91],"bonferroni":[70,98],"holm":[73,95],"holm_onesided":[72,96],"pairwise_bonferroni":[70,96],"chi2_scheffe":[54,111],"chi2":[42,116]},{"m":"pplx-70b-online","r":966.8,"ci":6.9,"n":6890,"arena":[79,91],"bonferroni":[74,96],"holm":[76,95],"holm_onesided":[74,96],"pairwise_bonferroni":[74,96],"chi2_scheffe":[55,110],"chi2":[54,115]},{"m":"deepseek-llm-67b-chat","r":965.6,"ci":8.0,"n":4981,"arena":[79,93],"bonferroni":[73,99],"holm":[75,96],"holm_onesided":[74,96],"pairwise_bonferroni":[74,96],"chi2_scheffe":[54,111],"chi2":[51,116]},{"m":"openchat-3.5","r":965.2,"ci":6.2,"n":8117,"arena":[80,92],"bonferroni":[75,96],"holm":[76,96],"holm_onesided":[76,96],"pairwise_bonferroni":[76,96],"chi2_scheffe":[57,109],"chi2":[54,115]},{"m":"openhermes-2.5-mistral-7b","r":963.5,"ci":7.7,"n":5091,"arena":[80,94],"bonferroni":[74,100],"holm":[76,96],"holm_onesided":[76,98],"pairwise_bonferroni":[75,98],"chi2_scheffe":[55,111],"chi2":[53,116]},{"m":"mistral-7b-instruct-v0.2","r":961.1,"ci":4.0,"n":20074,"arena":[81,93],"bonferroni":[79,96],"holm":[81,96],"holm_onesided":[80,96],"pairwise_bonferroni":[80,98],"chi2_scheffe":[68,108],"chi2":[61,112]},{"m":"qwen1.5-7b-chat","r":959.1,"ci":7.9,"n":4864,"arena":[81,95],"bonferroni":[76,101],"holm":[79,99],"holm_onesided":[79,100],"pairwise_bonferroni":[77,100],"chi2_scheffe":[56,113],"chi2":[54,116]},{"m":"phi-3-mini-4k-instruct-june-2024","r":957.1,"ci":5.7,"n":10152,"arena":[82,95],"bonferroni":[79,100],"holm":[81,99],"holm_onesided":[81,100],"pairwise_bonferroni":[80,100],"chi2_scheffe":[64,111],"chi2":[54,115]},{"m":"gpt-3.5-turbo-1106","r":956.7,"ci":4.5,"n":17026,"arena":[82,95],"bonferroni":[81,100],"holm":[81,98],"holm_onesided":[81,100],"pairwise_bonferroni":[81,100],"chi2_scheffe":[70,110],"chi2":[61,115]},{"m":"phi-3-mini-4k-instruct","r":954.9,"ci":3.9,"n":21129,"arena":[85,95],"bonferroni":[81,100],"holm":[81,100],"holm_onesided":[81,100],"pairwise_bonferroni":[81,100],"chi2_scheffe":[71,110],"chi2":[65,115]},{"m":"llama-2-13b-chat","r":952.1,"ci":4.1,"n":19740,"arena":[87,95],"bonferroni":[81,101],"holm":[82,100],"holm_onesided":[81,100],"pairwise_bonferroni":[81,101],"chi2_scheffe":[71,111],"chi2":[65,115]},{"m":"dolphin-2.2.1-mistral-7b","r":951.4,"ci":12.7,"n":1714,"arena":[82,100],"bonferroni":[76,108],"holm":[79,108],"holm_onesided":[76,108],"pairwise_bonferroni":[76,108],"chi2_scheffe":[54,116],"chi2":[41,121]},{"m":"solar-10.7b-instruct-v1.0","r":951.2,"ci":8.5,"n":4291,"arena":[84,99],"bonferroni":[80,106],"holm":[81,102],"holm_onesided":[81,104],"pairwise_bonferroni":[80,104],"chi2_scheffe":[59,115],"chi2":[54,119]},{"m":"wizardlm-13b","r":947.4,"ci":6.8,"n":7192,"arena":[88,99],"bonferroni":[81,106],"holm":[82,102],"holm_onesided":[82,104],"pairwise_bonferroni":[81,105],"chi2_scheffe":[68,114],"chi2":[56,117]},{"m":"zephyr-7b-beta","r":942.2,"ci":5.4,"n":11330,"arena":[93,102],"bonferroni":[86,108],"holm":[89,106],"holm_onesided":[88,106],"pairwise_bonferroni":[88,106],"chi2_scheffe":[74,114],"chi2":[65,116]},{"m":"mpt-30b-chat","r":934.4,"ci":10.7,"n":2650,"arena":[93,108],"bonferroni":[85,111],"holm":[88,108],"holm_onesided":[87,110],"pairwise_bonferroni":[86,110],"chi2_scheffe":[62,116],"chi2":[54,121]},{"m":"pplx-7b-online","r":933.3,"ci":7.3,"n":6338,"arena":[95,108],"bonferroni":[91,108],"holm":[93,108],"holm_onesided":[93,108],"pairwise_bonferroni":[92,108],"chi2_scheffe":[73,116],"chi2":[65,119]},{"m":"codellama-34b-instruct","r":931.3,"ci":6.6,"n":7508,"arena":[96,108],"bonferroni":[93,109],"holm":[93,108],"holm_onesided":[93,108],"pairwise_bonferroni":[93,108],"chi2_scheffe":[76,116],"chi2":[66,119]},{"m":"codellama-70b-instruct","r":931.2,"ci":15.8,"n":1193,"arena":[93,108],"bonferroni":[81,114],"holm":[84,112],"holm_onesided":[82,113],"pairwise_bonferroni":[82,114],"chi2_scheffe":[54,121],"chi2":[41,124]},{"m":"vicuna-13b","r":930.6,"ci":4.2,"n":19794,"arena":[97,108],"bonferroni":[93,108],"holm":[95,108],"holm_onesided":[93,108],"pairwise_bonferroni":[93,108],"chi2_scheffe":[81,115],"chi2":[73,117]},{"m":"zephyr-7b-alpha","r":930.0,"ci":12.9,"n":1815,"arena":[93,108],"bonferroni":[85,112],"holm":[88,111],"holm_onesided":[87,111],"pairwise_bonferroni":[86,111],"chi2_scheffe":[56,119],"chi2":[53,122]},{"m":"gemma-7b-it","r":926.2,"ci":5.9,"n":9178,"arena":[97,108],"bonferroni":[93,111],"holm":[95,108],"holm_onesided":[95,110],"pairwise_bonferroni":[95,110],"chi2_scheffe":[80,116],"chi2":[71,119]},{"m":"llama-2-7b-chat","r":925.8,"ci":4.7,"n":14559,"arena":[97,108],"bonferroni":[95,110],"holm":[96,108],"holm_onesided":[96,108],"pairwise_bonferroni":[96,110],"chi2_scheffe":[81,116],"chi2":[74,119]},{"m":"phi-3-mini-128k-instruct","r":925.4,"ci":4.0,"n":21617,"arena":[97,108],"bonferroni":[95,110],"holm":[96,108],"holm_onesided":[96,109],"pairwise_bonferroni":[96,109],"chi2_scheffe":[82,116],"chi2":[76,117]},{"m":"qwen-14b-chat","r":923.8,"ci":7.9,"n":5070,"arena":[97,108],"bonferroni":[93,111],"holm":[95,111],"holm_onesided":[95,111],"pairwise_bonferroni":[94,111],"chi2_scheffe":[76,116],"chi2":[66,121]},{"m":"falcon-180b-chat","r":923.2,"ci":15.3,"n":1325,"arena":[96,111],"bonferroni":[87,114],"holm":[91,114],"holm_onesided":[88,114],"pairwise_bonferroni":[88,114],"chi2_scheffe":[54,121],"chi2":[48,124]},{"m":"guanaco-33b","r":921.2,"ci":10.4,"n":3003,"arena":[97,111],"bonferroni":[93,114],"holm":[95,112],"holm_onesided":[93,112],"pairwise_bonferroni":[93,113],"chi2_scheffe":[70,119],"chi2":[60,122]},{"m":"gemma-1.1-2b-it","r":909.1,"ci":5.5,"n":11363,"arena":[107,111],"bonferroni":[100,114],"holm":[104,114],"holm_onesided":[102,114],"pairwise_bonferroni":[101,114],"chi2_scheffe":[86,119],"chi2":[79,121]},{"m":"stripedhyena-nous-7b","r":906.1,"ci":7.7,"n":5270,"arena":[107,114],"bonferroni":[99,115],"holm":[104,114],"holm_onesided":[101,114],"pairwise_bonferroni":[100,114],"chi2_scheffe":[81,119],"chi2":[75,122]},{"m":"olmo-7b-instruct","r":904.1,"ci":7.2,"n":6496,"arena":[107,114],"bonferroni":[102,115],"holm":[104,114],"holm_onesided":[104,114],"pairwise_bonferroni":[104,114],"chi2_scheffe":[83,119],"chi2":[76,122]},{"m":"mistral-7b-instruct","r":897.0,"ci":6.0,"n":9145,"arena":[110,114],"bonferroni":[105,116],"holm":[106,115],"holm_onesided":[106,115],"pairwise_bonferroni":[106,116],"chi2_scheffe":[92,119],"chi2":[82,122]},{"m":"vicuna-7b","r":893.9,"ci":6.9,"n":7022,"arena":[110,114],"bonferroni":[106,116],"holm":[108,116],"holm_onesided":[107,116],"pairwise_bonferroni":[106,116],"chi2_scheffe":[92,120],"chi2":[81,122]},{"m":"palm-2","r":892.3,"ci":6.4,"n":8745,"arena":[110,115],"bonferroni":[106,116],"holm":[108,116],"holm_onesided":[108,116],"pairwise_bonferroni":[107,116],"chi2_scheffe":[93,120],"chi2":[82,122]},{"m":"gemma-2b-it","r":878.4,"ci":8.3,"n":4921,"arena":[114,116],"bonferroni":[110,117],"holm":[112,116],"holm_onesided":[112,116],"pairwise_bonferroni":[112,117],"chi2_scheffe":[95,122],"chi2":[82,124]},{"m":"qwen1.5-4b-chat","r":877.1,"ci":6.6,"n":7811,"arena":[115,116],"bonferroni":[112,117],"holm":[113,116],"holm_onesided":[113,116],"pairwise_bonferroni":[112,116],"chi2_scheffe":[97,122],"chi2":[88,123]},{"m":"koala-13b","r":853.1,"ci":7.2,"n":7038,"arena":[117,118],"bonferroni":[115,119],"holm":[117,118],"holm_onesided":[117,119],"pairwise_bonferroni":[116,119],"chi2_scheffe":[105,122],"chi2":[97,126]},{"m":"chatglm3-6b","r":844.1,"ci":8.6,"n":4763,"arena":[117,118],"bonferroni":[117,121],"holm":[117,119],"holm_onesided":[117,120],"pairwise_bonferroni":[117,121],"chi2_scheffe":[105,125],"chi2":[97,127]},{"m":"gpt4all-13b-snoozy","r":820.4,"ci":13.4,"n":1787,"arena":[119,122],"bonferroni":[117,124],"holm":[118,123],"holm_onesided":[117,123],"pairwise_bonferroni":[117,123],"chi2_scheffe":[105,127],"chi2":[94,129]},{"m":"mpt-7b-chat","r":816.1,"ci":9.2,"n":4018,"arena":[119,122],"bonferroni":[118,123],"holm":[119,122],"holm_onesided":[118,122],"pairwise_bonferroni":[118,123],"chi2_scheffe":[113,126],"chi2":[102,129]},{"m":"chatglm2-6b","r":812.8,"ci":11.4,"n":2707,"arena":[119,122],"bonferroni":[118,124],"holm":[119,123],"holm_onesided":[119,124],"pairwise_bonferroni":[118,124],"chi2_scheffe":[111,127],"chi2":[102,129]},{"m":"RWKV-4-Raven-14B","r":810.6,"ci":8.5,"n":4938,"arena":[119,122],"bonferroni":[119,124],"holm":[119,123],"holm_onesided":[119,123],"pairwise_bonferroni":[119,123],"chi2_scheffe":[115,126],"chi2":[106,129]},{"m":"alpaca-13b","r":790.4,"ci":8.0,"n":5874,"arena":[123,124],"bonferroni":[119,125],"holm":[120,124],"holm_onesided":[120,125],"pairwise_bonferroni":[119,125],"chi2_scheffe":[118,127],"chi2":[113,129]},{"m":"oasst-pythia-12b","r":782.3,"ci":7.7,"n":6382,"arena":[123,125],"bonferroni":[120,126],"holm":[123,125],"holm_onesided":[122,125],"pairwise_bonferroni":[122,125],"chi2_scheffe":[118,128],"chi2":[114,129]},{"m":"chatglm-6b","r":767.8,"ci":8.7,"n":4995,"arena":[124,126],"bonferroni":[123,126],"holm":[124,126],"holm_onesided":[123,126],"pairwise_bonferroni":[123,126],"chi2_scheffe":[118,129],"chi2":[117,129]},{"m":"fastchat-t5-3b","r":757.1,"ci":9.1,"n":4304,"arena":[125,126],"bonferroni":[124,127],"holm":[125,126],"holm_onesided":[125,127],"pairwise_bonferroni":[125,127],"chi2_scheffe":[119,129],"chi2":[117,129]},{"m":"stablelm-tuned-alpha-7b","r":728.5,"ci":10.3,"n":3334,"arena":[127,128],"bonferroni":[126,128],"holm":[127,128],"holm_onesided":[126,128],"pairwise_bonferroni":[126,128],"chi2_scheffe":[121,129],"chi2":[118,129]},{"m":"dolly-v2-12b","r":710.9,"ci":10.4,"n":3484,"arena":[127,128],"bonferroni":[127,129],"holm":[127,129],"holm_onesided":[127,129],"pairwise_bonferroni":[127,129],"chi2_scheffe":[124,129],"chi2":[119,129]},{"m":"llama-13b","r":687.7,"ci":12.1,"n":2443,"arena":[129,129],"bonferroni":[128,129],"holm":[128,129],"holm_onesided":[128,129],"pairwise_bonferroni":[128,129],"chi2_scheffe":[125,129],"chi2":[119,129]}],"summary":{"arena":{"cover":0.909,"width":7.99,"power":0.945,"anyFalse":0.155,"realWidth":7.9},"bonferroni":{"cover":1.0,"width":13.647,"power":0.901,"anyFalse":0.0,"realWidth":13.8},"holm":{"cover":1.0,"width":11.252,"power":0.92,"anyFalse":0.0,"realWidth":11.4},"holm_onesided":{"cover":1.0,"width":12.385,"power":0.911,"anyFalse":0.0,"realWidth":12.3},"pairwise_bonferroni":{"cover":1.0,"width":12.729,"power":0.908,"anyFalse":0.0,"realWidth":12.7},"chi2_scheffe":{"cover":1.0,"width":33.069,"power":0.749,"anyFalse":0.0,"realWidth":33.2},"chi2":{"cover":1.0,"width":43.431,"power":0.669,"anyFalse":0.0,"realWidth":43.6}},"sweep":{"z":[1.8,1.85,1.9,1.95,1.96,2.0,2.05,2.1,2.15,2.2,2.25,2.3,2.35,2.4,2.45,2.5,2.55,2.6,2.65,2.7,2.75,2.8,2.85,2.9,2.95,3.0,3.05,3.1,3.15,3.2,3.25,3.3,3.35,3.4,3.45,3.5,3.548,3.55,3.6,3.65,3.7,3.75,3.8,3.85,3.9,3.95,4.0],"cover":[0.823,0.854,0.883,0.906,0.909,0.924,0.943,0.956,0.969,0.979,0.983,0.983,0.988,0.99,0.992,0.993,0.996,0.997,0.997,0.998,0.998,0.998,0.998,0.998,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"width":[7.425,7.601,7.776,7.954,7.99,8.133,8.308,8.483,8.661,8.838,9.015,9.189,9.364,9.539,9.719,9.896,10.073,10.249,10.427,10.605,10.782,10.961,11.141,11.314,11.494,11.67,11.848,12.028,12.21,12.389,12.567,12.749,12.93,13.115,13.295,13.473,13.647,13.653,13.832,14.011,14.192,14.372,14.554,14.735,14.912,15.094,15.273],"ciCover":[0.0,0.001,0.001,0.003,0.003,0.003,0.003,0.011,0.018,0.032,0.046,0.064,0.086,0.124,0.158,0.206,0.25,0.29,0.333,0.376,0.42,0.464,0.52,0.567,0.61,0.661,0.7,0.732,0.766,0.802,0.834,0.857,0.878,0.901,0.915,0.927,0.945,0.945,0.952,0.957,0.97,0.979,0.983,0.985,0.987,0.99,0.992]},"stress":[{"world":"2024 strengths","arena":0.909,"bonferroni":1.0,"holm":1.0},{"world":"Strengths \u00d7 0.25","arena":0.914,"bonferroni":1.0,"holm":1.0},{"world":"20 tiers, near ties","arena":0.668,"bonferroni":1.0,"holm":0.994},{"world":"20 tiers, exact ties","arena":0.241,"bonferroni":1.0,"holm":0.975},{"world":"10 tiers, exact ties","arena":0.073,"bonferroni":0.999,"holm":0.966},{"world":"All models tied","arena":0.002,"bonferroni":0.984,"holm":0.973}],"q1":{"ciAll":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","rsAll":"1111111111111111111111111111110111110111110100111011111111111111111111111111111111101101101111111111111111110111111111111011011111111111011111101011011111111111111111101110111011111111111111111001110111111111111110111111111111111111111111011101111111111111111111111111110111011111111111111110111111101111101011111111111111111111111101111111111101111111111111111111111111110111111111110111111111011111111111111111111111111111110101111111011111111111011111011111111111011111111111111111111100111111111110111101101111111111101111111111110101111111111111111111111101111111111111111110101101110111111111110111111111111111111111111111111111111111111111111111111111111111110101111111111111101101011111111111111110100111111111111111111111111111011111111011011111111011111110111111111011011011111111111111111111111011111111111101110111011111111111111110011110111111111111111111111111111110111111011111111101110101111001111111111111111110111111101111111111111111110111111111111111111111111111110111111101111111","ciEach":0.948,"rsEach":0.9992,"missPerRep":6.65},"q3":{"models":["chatgpt-4o-latest-2024-08-08","gemini-1.5-pro-exp-0801","gpt-4o-2024-05-13","gpt-4o-mini-2024-07-18","claude-3-5-sonnet-20240620","gemini-advanced-0514","llama-3.1-405b-instruct","gemini-1.5-pro-api-0514","gpt-4o-2024-08-06","gemini-1.5-pro-api-0409-preview","gpt-4-turbo-2024-04-09","mistral-large-2407","gpt-4-1106-preview","athene-70b-0725","claude-3-opus-20240229","gpt-4-0125-preview","llama-3.1-70b-instruct","yi-large-preview","gemini-1.5-flash-api-0514","reka-core-20240722","deepseek-v2-api-0628","gemma-2-27b-it","deepseek-coder-v2-0724","yi-large","nemotron-4-340b-instruct","bard-jan-24-gemini-pro","glm-4-0520","llama-3-70b-instruct","claude-3-sonnet-20240229","reka-core-20240501","reka-flash-20240722","command-r-plus","qwen2-72b-instruct","gemma-2-9b-it","gpt-4-0314","qwen-max-0428","glm-4-0116","claude-3-haiku-20240307","deepseek-coder-v2","llama-3.1-8b-instruct"],"cats":["Coding","Math","Instruction following","Hard prompts","Chinese","Russian","Multi-turn","Long query"],"cells":[{"m":"llama-3-70b-instruct","c":4,"pts":-72.9,"z":-40.25,"n":16254},{"m":"llama-3-70b-instruct","c":5,"pts":-41.7,"z":-19.98,"n":15647},{"m":"claude-3-opus-20240229","c":5,"pts":38.9,"z":18.36,"n":15501},{"m":"command-r-plus","c":1,"pts":-36.3,"z":-16.22,"n":10258},{"m":"llama-3-70b-instruct","c":7,"pts":-29.4,"z":-14.61,"n":18181},{"m":"deepseek-coder-v2","c":0,"pts":60.9,"z":14.43,"n":3283},{"m":"command-r-plus","c":0,"pts":-25.4,"z":-13.76,"n":16305},{"m":"claude-3-opus-20240229","c":6,"pts":26.7,"z":13.39,"n":23369},{"m":"qwen2-72b-instruct","c":4,"pts":63.1,"z":13.36,"n":3842},{"m":"bard-jan-24-gemini-pro","c":2,"pts":-48.2,"z":-12.36,"n":3751},{"m":"claude-3-opus-20240229","c":2,"pts":11.8,"z":12.33,"n":55626},{"m":"claude-3-opus-20240229","c":4,"pts":22.8,"z":11.8,"n":20007},{"m":"qwen-max-0428","c":4,"pts":68.0,"z":11.22,"n":2251},{"m":"command-r-plus","c":3,"pts":-16.0,"z":-11.08,"n":23166},{"m":"deepseek-coder-v2","c":3,"pts":38.3,"z":10.81,"n":4628},{"m":"claude-3-5-sonnet-20240620","c":6,"pts":33.5,"z":10.61,"n":8022},{"m":"gemini-1.5-pro-api-0409-preview","c":0,"pts":-26.3,"z":-10.21,"n":11817},{"m":"gemini-1.5-pro-api-0409-preview","c":1,"pts":-27.4,"z":-9.72,"n":7699},{"m":"gemini-1.5-pro-api-0409-preview","c":3,"pts":-19.9,"z":-9.69,"n":15468},{"m":"bard-jan-24-gemini-pro","c":3,"pts":-46.4,"z":-9.58,"n":2783},{"m":"claude-3-sonnet-20240229","c":6,"pts":20.8,"z":9.47,"n":17377},{"m":"bard-jan-24-gemini-pro","c":1,"pts":-55.6,"z":-9.23,"n":1566},{"m":"gpt-4-0314","c":2,"pts":19.8,"z":9.16,"n":18618},{"m":"gemini-1.5-flash-api-0514","c":7,"pts":28.5,"z":9.06,"n":6995},{"m":"claude-3-5-sonnet-20240620","c":0,"pts":27.8,"z":9.05,"n":8967},{"m":"reka-core-20240501","c":2,"pts":-12.2,"z":-8.9,"n":23025},{"m":"claude-3-sonnet-20240229","c":5,"pts":24.3,"z":8.89,"n":11248},{"m":"claude-3-haiku-20240307","c":5,"pts":21.9,"z":8.87,"n":10898},{"m":"qwen2-72b-instruct","c":1,"pts":30.3,"z":8.81,"n":4348},{"m":"deepseek-coder-v2","c":1,"pts":49.8,"z":8.64,"n":1954},{"m":"reka-core-20240501","c":1,"pts":-23.7,"z":-8.49,"n":7936},{"m":"claude-3-5-sonnet-20240620","c":1,"pts":21.6,"z":8.38,"n":6128},{"m":"gemini-1.5-pro-api-0409-preview","c":4,"pts":16.1,"z":8.12,"n":6543},{"m":"yi-large-preview","c":4,"pts":33.6,"z":8.07,"n":6160},{"m":"llama-3-70b-instruct","c":6,"pts":13.5,"z":7.88,"n":21577},{"m":"claude-3-5-sonnet-20240620","c":2,"pts":13.1,"z":7.73,"n":17481},{"m":"gemini-1.5-pro-api-0514","c":7,"pts":23.0,"z":7.4,"n":8578},{"m":"gemma-2-9b-it","c":0,"pts":-22.3,"z":-7.28,"n":4857},{"m":"claude-3-opus-20240229","c":7,"pts":14.6,"z":7.23,"n":17775},{"m":"command-r-plus","c":4,"pts":21.9,"z":7.21,"n":10797},{"m":"gemini-1.5-pro-api-0409-preview","c":5,"pts":23.0,"z":7.17,"n":4889},{"m":"claude-3-sonnet-20240229","c":0,"pts":12.0,"z":6.91,"n":23206},{"m":"bard-jan-24-gemini-pro","c":7,"pts":-83.4,"z":-6.87,"n":606},{"m":"gpt-4-0314","c":3,"pts":14.9,"z":6.84,"n":14275},{"m":"gemini-1.5-pro-exp-0801","c":0,"pts":-25.0,"z":-6.7,"n":3414},{"m":"gemini-1.5-pro-api-0514","c":4,"pts":26.5,"z":6.47,"n":8063},{"m":"llama-3-70b-instruct","c":2,"pts":-6.2,"z":-6.35,"n":57936},{"m":"gpt-4o-mini-2024-07-18","c":1,"pts":-34.8,"z":-6.31,"n":2586},{"m":"gemini-1.5-pro-exp-0801","c":3,"pts":-19.3,"z":-6.26,"n":4942},{"m":"reka-core-20240501","c":6,"pts":-15.4,"z":-6.23,"n":8600},{"m":"gpt-4-0314","c":1,"pts":24.7,"z":6.16,"n":7263},{"m":"claude-3-5-sonnet-20240620","c":3,"pts":15.4,"z":6.14,"n":12964},{"m":"command-r-plus","c":7,"pts":16.6,"z":6.1,"n":9590},{"m":"gemma-2-9b-it","c":3,"pts":-14.5,"z":-6.08,"n":6907},{"m":"claude-3-haiku-20240307","c":0,"pts":10.7,"z":6.04,"n":22558},{"m":"chatgpt-4o-latest-2024-08-08","c":1,"pts":-33.2,"z":-5.95,"n":2308},{"m":"claude-3-haiku-20240307","c":4,"pts":-9.5,"z":-5.93,"n":16060},{"m":"claude-3-opus-20240229","c":1,"pts":8.1,"z":5.74,"n":20236},{"m":"bard-jan-24-gemini-pro","c":0,"pts":-37.1,"z":-5.72,"n":1968},{"m":"gemini-advanced-0514","c":0,"pts":-11.6,"z":-5.58,"n":10661},{"m":"gemma-2-27b-it","c":3,"pts":-12.6,"z":-5.5,"n":7368},{"m":"deepseek-coder-v2","c":7,"pts":37.3,"z":5.48,"n":1921},{"m":"gemma-2-9b-it","c":1,"pts":-23.7,"z":-5.35,"n":3063},{"m":"reka-core-20240501","c":7,"pts":-15.4,"z":-5.19,"n":7489},{"m":"deepseek-coder-v2-0724","c":0,"pts":53.7,"z":5.16,"n":617},{"m":"reka-core-20240501","c":3,"pts":-7.6,"z":-5.16,"n":18564},{"m":"gemini-advanced-0514","c":3,"pts":-8.2,"z":-5.13,"n":14658},{"m":"glm-4-0116","c":4,"pts":49.1,"z":5.13,"n":802},{"m":"llama-3.1-405b-instruct","c":4,"pts":-31.4,"z":-5.07,"n":1538},{"m":"deepseek-v2-api-0628","c":3,"pts":19.8,"z":4.99,"n":4085},{"m":"llama-3-70b-instruct","c":0,"pts":-6.7,"z":-4.87,"n":33945},{"m":"reka-core-20240501","c":0,"pts":-9.2,"z":-4.86,"n":13819},{"m":"deepseek-coder-v2","c":4,"pts":38.1,"z":4.86,"n":1748},{"m":"chatgpt-4o-latest-2024-08-08","c":6,"pts":37.3,"z":4.84,"n":1610},{"m":"gemma-2-27b-it","c":0,"pts":-13.7,"z":-4.83,"n":5113},{"m":"gpt-4o-2024-05-13","c":1,"pts":-12.6,"z":-4.73,"n":9925},{"m":"gpt-4-turbo-2024-04-09","c":2,"pts":5.6,"z":4.66,"n":30439},{"m":"llama-3.1-70b-instruct","c":5,"pts":-29.3,"z":-4.56,"n":1258},{"m":"reka-flash-20240722","c":3,"pts":-21.3,"z":-4.55,"n":1777},{"m":"athene-70b-0725","c":1,"pts":-32.4,"z":-4.49,"n":1577},{"m":"command-r-plus","c":5,"pts":12.5,"z":4.41,"n":8315},{"m":"claude-3-sonnet-20240229","c":7,"pts":12.7,"z":4.39,"n":12470},{"m":"qwen-max-0428","c":5,"pts":-25.5,"z":-4.34,"n":2479},{"m":"gemini-advanced-0514","c":5,"pts":15.4,"z":4.34,"n":6179},{"m":"reka-core-20240501","c":4,"pts":18.6,"z":4.29,"n":6469},{"m":"gemini-1.5-pro-api-0409-preview","c":2,"pts":-7.2,"z":-4.27,"n":19543},{"m":"deepseek-coder-v2","c":2,"pts":12.6,"z":4.23,"n":5899},{"m":"gemini-advanced-0514","c":2,"pts":-6.0,"z":-4.22,"n":19311},{"m":"llama-3-70b-instruct","c":3,"pts":-4.4,"z":-4.21,"n":46881},{"m":"gemini-advanced-0514","c":7,"pts":-11.7,"z":-4.19,"n":5802},{"m":"gemini-1.5-pro-api-0514","c":5,"pts":13.7,"z":4.17,"n":8318},{"m":"gemini-advanced-0514","c":4,"pts":22.8,"z":4.11,"n":6060},{"m":"reka-flash-20240722","c":1,"pts":-34.4,"z":-4.08,"n":1035},{"m":"deepseek-v2-api-0628","c":5,"pts":24.4,"z":4.07,"n":1681},{"m":"deepseek-v2-api-0628","c":0,"pts":20.1,"z":4.07,"n":2925},{"m":"athene-70b-0725","c":2,"pts":-13.7,"z":-4.05,"n":4020},{"m":"gemma-2-9b-it","c":2,"pts":-8.2,"z":-4.03,"n":9487},{"m":"claude-3-haiku-20240307","c":7,"pts":10.9,"z":4.01,"n":12887},{"m":"glm-4-0520","c":4,"pts":40.2,"z":4.0,"n":1256},{"m":"gemini-1.5-pro-exp-0801","c":1,"pts":-23.0,"z":-3.99,"n":2796},{"m":"reka-core-20240722","c":0,"pts":-22.7,"z":-3.96,"n":1245},{"m":"gpt-4-0125-preview","c":1,"pts":10.4,"z":3.94,"n":11186},{"m":"gemini-1.5-flash-api-0514","c":1,"pts":-12.2,"z":-3.87,"n":7337},{"m":"gpt-4o-2024-05-13","c":6,"pts":13.7,"z":3.83,"n":13248},{"m":"yi-large-preview","c":6,"pts":-9.2,"z":-3.81,"n":8347},{"m":"athene-70b-0725","c":7,"pts":-26.8,"z":-3.79,"n":1138},{"m":"claude-3-haiku-20240307","c":2,"pts":3.8,"z":3.78,"n":39531},{"m":"gpt-4-1106-preview","c":7,"pts":-9.8,"z":-3.78,"n":8025},{"m":"gpt-4-turbo-2024-04-09","c":0,"pts":6.6,"z":3.78,"n":17227},{"m":"qwen2-72b-instruct","c":5,"pts":-15.0,"z":-3.76,"n":4286},{"m":"gemini-1.5-flash-api-0514","c":4,"pts":19.4,"z":3.71,"n":6407},{"m":"claude-3-haiku-20240307","c":3,"pts":4.7,"z":3.68,"n":31187},{"m":"nemotron-4-340b-instruct","c":0,"pts":-10.9,"z":-3.64,"n":3900},{"m":"gemini-1.5-pro-exp-0801","c":4,"pts":29.0,"z":3.59,"n":1661},{"m":"gpt-4-1106-preview","c":1,"pts":11.4,"z":3.54,"n":12020},{"m":"gpt-4o-2024-05-13","c":7,"pts":10.7,"z":3.51,"n":9826},{"m":"reka-core-20240722","c":3,"pts":-15.0,"z":-3.5,"n":1693},{"m":"yi-large-preview","c":5,"pts":9.8,"z":3.48,"n":6572},{"m":"gemini-advanced-0514","c":1,"pts":-12.1,"z":-3.47,"n":6677},{"m":"deepseek-v2-api-0628","c":1,"pts":11.3,"z":3.43,"n":2071},{"m":"gpt-4-0125-preview","c":5,"pts":-6.8,"z":-3.38,"n":7312},{"m":"claude-3-haiku-20240307","c":6,"pts":7.9,"z":3.35,"n":17489},{"m":"gpt-4o-2024-05-13","c":0,"pts":9.4,"z":3.34,"n":16084},{"m":"gpt-4-0314","c":4,"pts":8.2,"z":3.34,"n":6107},{"m":"gpt-4-0314","c":0,"pts":9.3,"z":3.33,"n":9677},{"m":"gemini-1.5-pro-api-0409-preview","c":7,"pts":-17.8,"z":-3.32,"n":5710},{"m":"qwen-max-0428","c":3,"pts":8.1,"z":3.3,"n":7526},{"m":"reka-core-20240722","c":1,"pts":-29.5,"z":-3.29,"n":920},{"m":"gpt-4-turbo-2024-04-09","c":5,"pts":-7.0,"z":-3.24,"n":8173},{"m":"mistral-large-2407","c":0,"pts":21.2,"z":3.24,"n":2019},{"m":"gpt-4o-2024-05-13","c":2,"pts":4.5,"z":3.2,"n":28989},{"m":"llama-3.1-8b-instruct","c":5,"pts":-20.4,"z":-3.17,"n":1163},{"m":"gemini-1.5-pro-api-0409-preview","c":6,"pts":-7.6,"z":-3.1,"n":6633},{"m":"mistral-large-2407","c":2,"pts":8.7,"z":3.08,"n":4038},{"m":"llama-3.1-405b-instruct","c":3,"pts":11.8,"z":3.08,"n":4729},{"m":"gemma-2-27b-it","c":1,"pts":-15.0,"z":-3.05,"n":3452},{"m":"gpt-4-0125-preview","c":4,"pts":9.0,"z":3.03,"n":10802},{"m":"llama-3.1-405b-instruct","c":6,"pts":21.1,"z":3.03,"n":3078},{"m":"deepseek-coder-v2-0724","c":3,"pts":24.7,"z":3.02,"n":909},{"m":"gemini-1.5-flash-api-0514","c":5,"pts":10.4,"z":3.0,"n":6742},{"m":"llama-3.1-70b-instruct","c":2,"pts":-9.4,"z":-2.97,"n":4762},{"m":"gemini-1.5-pro-exp-0801","c":2,"pts":-6.8,"z":-2.95,"n":7254},{"m":"reka-flash-20240722","c":2,"pts":-13.6,"z":-2.91,"n":2323},{"m":"gpt-4o-2024-05-13","c":3,"pts":6.5,"z":2.88,"n":22442},{"m":"reka-flash-20240722","c":0,"pts":-14.1,"z":-2.85,"n":1282},{"m":"claude-3-sonnet-20240229","c":2,"pts":4.9,"z":2.85,"n":40183},{"m":"reka-flash-20240722","c":5,"pts":25.5,"z":2.82,"n":548},{"m":"qwen-max-0428","c":6,"pts":-13.4,"z":-2.79,"n":2995},{"m":"reka-core-20240501","c":5,"pts":7.7,"z":2.77,"n":6447},{"m":"gpt-4o-mini-2024-07-18","c":2,"pts":-7.8,"z":-2.76,"n":6912},{"m":"gemma-2-27b-it","c":2,"pts":-5.8,"z":-2.74,"n":10013},{"m":"gemini-1.5-pro-exp-0801","c":7,"pts":-9.4,"z":-2.71,"n":2126},{"m":"llama-3.1-70b-instruct","c":7,"pts":-13.8,"z":-2.69,"n":1345},{"m":"qwen2-72b-instruct","c":2,"pts":4.8,"z":2.67,"n":12950},{"m":"gemma-2-27b-it","c":5,"pts":13.5,"z":2.62,"n":3074},{"m":"glm-4-0116","c":5,"pts":-22.8,"z":-2.54,"n":931},{"m":"gemma-2-27b-it","c":4,"pts":17.7,"z":2.51,"n":2778},{"m":"claude-3-opus-20240229","c":3,"pts":3.0,"z":2.5,"n":44103},{"m":"gpt-4o-mini-2024-07-18","c":7,"pts":15.7,"z":2.5,"n":2154},{"m":"gemini-1.5-flash-api-0514","c":2,"pts":-3.5,"z":-2.49,"n":20875},{"m":"deepseek-coder-v2-0724","c":7,"pts":34.8,"z":2.45,"n":357},{"m":"llama-3.1-405b-instruct","c":0,"pts":14.1,"z":2.43,"n":3299},{"m":"gpt-4o-2024-08-06","c":2,"pts":8.6,"z":2.42,"n":3058},{"m":"reka-core-20240722","c":2,"pts":-11.2,"z":-2.4,"n":2370},{"m":"gpt-4-0314","c":6,"pts":9.9,"z":2.37,"n":8200},{"m":"qwen-max-0428","c":0,"pts":6.4,"z":2.35,"n":5493},{"m":"gemini-1.5-pro-exp-0801","c":5,"pts":16.3,"z":2.35,"n":1905},{"m":"gpt-4o-mini-2024-07-18","c":6,"pts":16.7,"z":2.35,"n":3310},{"m":"gpt-4-turbo-2024-04-09","c":1,"pts":2.3,"z":2.35,"n":11154},{"m":"deepseek-v2-api-0628","c":7,"pts":16.2,"z":2.29,"n":1854},{"m":"chatgpt-4o-latest-2024-08-08","c":0,"pts":18.3,"z":2.26,"n":1966},{"m":"nemotron-4-340b-instruct","c":7,"pts":14.4,"z":2.24,"n":2254},{"m":"gpt-4-1106-preview","c":4,"pts":7.2,"z":2.23,"n":8520},{"m":"mistral-large-2407","c":3,"pts":11.1,"z":2.21,"n":2894},{"m":"gemini-1.5-pro-api-0514","c":1,"pts":-6.9,"z":-2.11,"n":8905},{"m":"yi-large-preview","c":3,"pts":5.3,"z":2.1,"n":15270},{"m":"glm-4-0520","c":3,"pts":11.7,"z":2.1,"n":3106},{"m":"reka-flash-20240722","c":7,"pts":-19.8,"z":-2.09,"n":604},{"m":"llama-3.1-70b-instruct","c":1,"pts":-19.9,"z":-2.09,"n":1738},{"m":"claude-3-sonnet-20240229","c":1,"pts":-2.5,"z":-2.08,"n":14328},{"m":"gpt-4-0125-preview","c":7,"pts":-4.0,"z":-2.07,"n":8570},{"m":"nemotron-4-340b-instruct","c":4,"pts":18.6,"z":2.05,"n":2472},{"m":"llama-3.1-8b-instruct","c":1,"pts":-19.4,"z":-2.03,"n":1762},{"m":"chatgpt-4o-latest-2024-08-08","c":7,"pts":20.3,"z":2.01,"n":1022},{"m":"nemotron-4-340b-instruct","c":5,"pts":12.4,"z":2.01,"n":2639},{"m":"llama-3.1-8b-instruct","c":0,"pts":12.0,"z":2.0,"n":2735},{"m":"chatgpt-4o-latest-2024-08-08","c":4,"pts":23.7,"z":1.99,"n":781},{"m":"qwen-max-0428","c":7,"pts":6.2,"z":1.95,"n":2982},{"m":"llama-3.1-8b-instruct","c":2,"pts":-6.5,"z":-1.9,"n":4419},{"m":"bard-jan-24-gemini-pro","c":4,"pts":23.3,"z":1.9,"n":443},{"m":"claude-3-sonnet-20240229","c":3,"pts":3.2,"z":1.9,"n":31753},{"m":"gpt-4-turbo-2024-04-09","c":3,"pts":2.5,"z":1.76,"n":24205},{"m":"llama-3.1-70b-instruct","c":4,"pts":-12.6,"z":-1.76,"n":1064},{"m":"deepseek-coder-v2-0724","c":5,"pts":21.6,"z":1.7,"n":345},{"m":"claude-3-5-sonnet-20240620","c":5,"pts":9.5,"z":1.7,"n":5201},{"m":"qwen2-72b-instruct","c":6,"pts":5.6,"z":1.63,"n":6113},{"m":"llama-3.1-8b-instruct","c":3,"pts":8.5,"z":1.61,"n":3142},{"m":"deepseek-coder-v2-0724","c":4,"pts":28.5,"z":1.61,"n":269},{"m":"nemotron-4-340b-instruct","c":2,"pts":4.1,"z":1.6,"n":7758},{"m":"glm-4-0116","c":3,"pts":8.7,"z":1.59,"n":2365},{"m":"nemotron-4-340b-instruct","c":1,"pts":-6.8,"z":-1.58,"n":2502},{"m":"gemini-1.5-pro-api-0514","c":6,"pts":1.1,"z":-1.54,"n":11792},{"m":"gemma-2-9b-it","c":6,"pts":-1.8,"z":-1.53,"n":4503},{"m":"yi-large-preview","c":2,"pts":-2.2,"z":-1.51,"n":19756},{"m":"gpt-4-0314","c":5,"pts":11.4,"z":1.51,"n":3848},{"m":"gpt-4-1106-preview","c":5,"pts":0.7,"z":-1.48,"n":6040},{"m":"gpt-4o-mini-2024-07-18","c":4,"pts":-6.7,"z":-1.46,"n":1687},{"m":"gpt-4-0125-preview","c":3,"pts":2.6,"z":1.45,"n":23227},{"m":"gpt-4-1106-preview","c":3,"pts":2.6,"z":1.44,"n":23801},{"m":"bard-jan-24-gemini-pro","c":6,"pts":-15.8,"z":-1.43,"n":1333},{"m":"reka-flash-20240722","c":4,"pts":15.1,"z":1.43,"n":495},{"m":"yi-large","c":5,"pts":9.5,"z":1.39,"n":2080},{"m":"athene-70b-0725","c":3,"pts":8.2,"z":1.39,"n":2896},{"m":"deepseek-coder-v2","c":6,"pts":-3.2,"z":-1.37,"n":2752},{"m":"deepseek-v2-api-0628","c":4,"pts":13.8,"z":1.36,"n":1411},{"m":"qwen2-72b-instruct","c":3,"pts":5.2,"z":1.35,"n":9841},{"m":"gemini-1.5-pro-api-0514","c":2,"pts":2.2,"z":1.35,"n":25725},{"m":"deepseek-v2-api-0628","c":2,"pts":2.3,"z":1.35,"n":5782},{"m":"nemotron-4-340b-instruct","c":3,"pts":-2.0,"z":-1.33,"n":5806},{"m":"yi-large-preview","c":0,"pts":5.5,"z":1.32,"n":10679},{"m":"gpt-4-1106-preview","c":0,"pts":3.4,"z":1.31,"n":16917},{"m":"athene-70b-0725","c":6,"pts":-1.6,"z":-1.31,"n":1795},{"m":"gpt-4o-2024-08-06","c":3,"pts":9.5,"z":1.3,"n":2178},{"m":"claude-3-opus-20240229","c":0,"pts":2.0,"z":1.29,"n":31022},{"m":"yi-large-preview","c":1,"pts":-4.8,"z":-1.29,"n":6506},{"m":"llama-3.1-405b-instruct","c":2,"pts":2.4,"z":1.28,"n":6660},{"m":"claude-3-5-sonnet-20240620","c":7,"pts":10.1,"z":1.26,"n":5511},{"m":"gpt-4o-2024-05-13","c":5,"pts":-2.4,"z":-1.26,"n":8975},{"m":"gemini-1.5-flash-api-0514","c":0,"pts":5.0,"z":1.25,"n":11562},{"m":"claude-3-haiku-20240307","c":1,"pts":-3.8,"z":-1.25,"n":13841},{"m":"reka-core-20240722","c":5,"pts":11.4,"z":1.25,"n":559},{"m":"command-r-plus","c":2,"pts":-1.5,"z":-1.25,"n":29176},{"m":"yi-large","c":2,"pts":-3.2,"z":-1.23,"n":6355},{"m":"mistral-large-2407","c":6,"pts":0.9,"z":-1.22,"n":1688},{"m":"glm-4-0520","c":6,"pts":9.9,"z":1.16,"n":1682},{"m":"glm-4-0116","c":6,"pts":-6.9,"z":-1.14,"n":1176},{"m":"yi-large","c":0,"pts":6.6,"z":1.12,"n":3211},{"m":"llama-3.1-405b-instruct","c":7,"pts":8.9,"z":1.12,"n":2007},{"m":"yi-large","c":7,"pts":-3.1,"z":-1.12,"n":2118},{"m":"llama-3.1-8b-instruct","c":4,"pts":-6.3,"z":-1.11,"n":1001},{"m":"glm-4-0520","c":0,"pts":9.4,"z":1.09,"n":2201},{"m":"deepseek-coder-v2","c":5,"pts":10.0,"z":1.08,"n":1922},{"m":"gpt-4o-2024-08-06","c":1,"pts":2.2,"z":1.08,"n":1487},{"m":"mistral-large-2407","c":1,"pts":-3.0,"z":1.08,"n":1603},{"m":"reka-core-20240722","c":4,"pts":14.6,"z":1.08,"n":431},{"m":"glm-4-0116","c":0,"pts":8.1,"z":1.07,"n":1712},{"m":"gemma-2-9b-it","c":5,"pts":8.1,"z":1.07,"n":2831},{"m":"gpt-4o-2024-08-06","c":6,"pts":-1.3,"z":-1.06,"n":981},{"m":"gpt-4o-mini-2024-07-18","c":0,"pts":7.3,"z":1.03,"n":3375},{"m":"chatgpt-4o-latest-2024-08-08","c":2,"pts":2.7,"z":1.02,"n":4784},{"m":"yi-large-preview","c":7,"pts":-1.3,"z":-0.96,"n":6816},{"m":"gemma-2-9b-it","c":4,"pts":10.0,"z":0.96,"n":2534},{"m":"gpt-4-0125-preview","c":6,"pts":5.7,"z":0.94,"n":12706},{"m":"deepseek-v2-api-0628","c":6,"pts":0.7,"z":-0.94,"n":2809},{"m":"athene-70b-0725","c":5,"pts":-5.7,"z":-0.94,"n":993},{"m":"gpt-4o-2024-08-06","c":5,"pts":-10.3,"z":-0.93,"n":468},{"m":"llama-3.1-8b-instruct","c":7,"pts":-3.6,"z":-0.92,"n":1221},{"m":"gemma-2-27b-it","c":7,"pts":-1.2,"z":-0.89,"n":3073},{"m":"gpt-4o-mini-2024-07-18","c":5,"pts":-3.8,"z":-0.86,"n":1905},{"m":"chatgpt-4o-latest-2024-08-08","c":3,"pts":7.2,"z":0.85,"n":3275},{"m":"deepseek-coder-v2-0724","c":1,"pts":-1.8,"z":0.84,"n":534},{"m":"qwen-max-0428","c":1,"pts":0.9,"z":0.83,"n":3221},{"m":"gpt-4-0125-preview","c":0,"pts":-1.0,"z":-0.8,"n":16301},{"m":"gemma-2-27b-it","c":6,"pts":0.7,"z":-0.78,"n":4718},{"m":"qwen2-72b-instruct","c":0,"pts":-0.3,"z":-0.78,"n":6627},{"m":"glm-4-0520","c":2,"pts":3.6,"z":0.77,"n":3960},{"m":"gpt-4-0125-preview","c":2,"pts":1.3,"z":-0.76,"n":29786},{"m":"claude-3-sonnet-20240229","c":4,"pts":1.8,"z":0.76,"n":16106},{"m":"llama-3.1-70b-instruct","c":3,"pts":-0.6,"z":-0.73,"n":3316},{"m":"gpt-4o-2024-08-06","c":0,"pts":9.8,"z":0.7,"n":1261},{"m":"gpt-4-turbo-2024-04-09","c":6,"pts":5.0,"z":0.69,"n":12424},{"m":"chatgpt-4o-latest-2024-08-08","c":5,"pts":-4.8,"z":-0.66,"n":812},{"m":"bard-jan-24-gemini-pro","c":5,"pts":28.9,"z":0.66,"n":281},{"m":"qwen2-72b-instruct","c":7,"pts":4.3,"z":0.66,"n":4266},{"m":"glm-4-0520","c":1,"pts":-1.9,"z":-0.64,"n":1280},{"m":"deepseek-coder-v2-0724","c":6,"pts":13.1,"z":0.64,"n":569},{"m":"gpt-4-turbo-2024-04-09","c":7,"pts":1.0,"z":0.58,"n":9675},{"m":"gemini-1.5-pro-api-0514","c":3,"pts":3.3,"z":0.53,"n":19420},{"m":"gpt-4o-2024-05-13","c":4,"pts":8.9,"z":0.5,"n":8114},{"m":"gpt-4-0314","c":7,"pts":5.8,"z":0.5,"n":4515},{"m":"gpt-4-1106-preview","c":2,"pts":1.2,"z":-0.49,"n":30876},{"m":"gemini-1.5-flash-api-0514","c":3,"pts":2.4,"z":0.48,"n":16117},{"m":"gemma-2-9b-it","c":7,"pts":4.7,"z":0.48,"n":2961},{"m":"llama-3.1-405b-instruct","c":5,"pts":-0.3,"z":-0.48,"n":1860},{"m":"reka-flash-20240722","c":6,"pts":1.7,"z":-0.47,"n":961},{"m":"yi-large","c":4,"pts":12.0,"z":0.46,"n":1843},{"m":"llama-3.1-70b-instruct","c":0,"pts":5.8,"z":0.46,"n":2606},{"m":"glm-4-0116","c":7,"pts":1.7,"z":0.43,"n":1002},{"m":"qwen-max-0428","c":2,"pts":-1.8,"z":-0.43,"n":9019},{"m":"llama-3.1-70b-instruct","c":6,"pts":9.9,"z":0.43,"n":2240},{"m":"gemini-1.5-pro-exp-0801","c":6,"pts":5.1,"z":-0.4,"n":3250},{"m":"yi-large","c":1,"pts":-0.9,"z":-0.39,"n":2067},{"m":"mistral-large-2407","c":4,"pts":6.2,"z":0.38,"n":863},{"m":"nemotron-4-340b-instruct","c":6,"pts":3.2,"z":0.38,"n":3195},{"m":"gpt-4o-mini-2024-07-18","c":3,"pts":3.2,"z":0.36,"n":4770},{"m":"glm-4-0520","c":5,"pts":6.3,"z":0.36,"n":1331},{"m":"glm-4-0116","c":1,"pts":-4.9,"z":-0.35,"n":955},{"m":"llama-3.1-8b-instruct","c":6,"pts":4.7,"z":-0.33,"n":1924},{"m":"reka-core-20240722","c":6,"pts":9.0,"z":0.32,"n":973},{"m":"athene-70b-0725","c":4,"pts":-0.1,"z":-0.32,"n":954},{"m":"mistral-large-2407","c":5,"pts":-1.7,"z":-0.32,"n":998},{"m":"gpt-4o-2024-08-06","c":4,"pts":1.1,"z":-0.31,"n":452},{"m":"yi-large","c":3,"pts":0.9,"z":-0.3,"n":4674},{"m":"reka-core-20240722","c":7,"pts":5.6,"z":0.3,"n":638},{"m":"athene-70b-0725","c":0,"pts":1.9,"z":-0.3,"n":2077},{"m":"command-r-plus","c":6,"pts":2.1,"z":0.27,"n":12427},{"m":"glm-4-0116","c":2,"pts":-0.9,"z":-0.25,"n":2947},{"m":"deepseek-coder-v2-0724","c":2,"pts":-0.7,"z":0.19,"n":1343},{"m":"gpt-4o-2024-08-06","c":7,"pts":0.8,"z":-0.18,"n":662},{"m":"gemini-1.5-pro-api-0514","c":0,"pts":4.1,"z":0.17,"n":13591},{"m":"llama-3.1-405b-instruct","c":1,"pts":-7.0,"z":0.17,"n":2502},{"m":"gpt-4-turbo-2024-04-09","c":4,"pts":2.3,"z":-0.16,"n":9618},{"m":"glm-4-0520","c":7,"pts":2.1,"z":-0.15,"n":1251},{"m":"yi-large","c":6,"pts":2.5,"z":0.15,"n":2835},{"m":"gemini-1.5-flash-api-0514","c":6,"pts":2.0,"z":-0.09,"n":9571},{"m":"mistral-large-2407","c":7,"pts":2.6,"z":-0.08,"n":1088},{"m":"gemini-advanced-0514","c":6,"pts":2.3,"z":-0.08,"n":7988},{"m":"llama-3-70b-instruct","c":1,"pts":-1.4,"z":0.06,"n":21530},{"m":"claude-3-5-sonnet-20240620","c":4,"pts":8.6,"z":-0.02,"n":4887},{"m":"gpt-4-1106-preview","c":6,"pts":3.9,"z":-0.01,"n":13147}],"allZ":[40.255,24.0,19.984,19.014,18.356,16.836,16.217,15.234,14.759,14.612,14.516,14.434,14.115,14.101,13.893,13.858,13.757,13.386,13.359,13.008,12.523,12.382,12.375,12.364,12.332,12.289,11.967,11.961,11.814,11.798,11.247,11.222,11.08,10.812,10.708,10.658,10.611,10.609,10.209,10.046,9.839,9.787,9.724,9.688,9.611,9.578,9.465,9.246,9.235,9.235,9.16,9.064,9.058,9.05,8.986,8.93,8.903,8.885,8.87,8.813,8.689,8.682,8.655,8.636,8.542,8.486,8.454,8.453,8.436,8.435,8.424,8.379,8.359,8.202,8.125,8.115,8.09,8.073,8.07,8.068,8.048,7.931,7.877,7.856,7.824,7.82,7.748,7.734,7.673,7.64,7.565,7.558,7.507,7.395,7.346,7.3,7.283,7.274,7.257,7.228,7.217,7.212,7.171,7.157,7.114,7.053,7.033,7.017,6.939,6.918,6.914,6.903,6.867,6.842,6.822,6.742,6.73,6.726,6.697,6.642,6.587,6.586,6.508,6.498,6.475,6.411,6.41,6.406,6.378,6.359,6.347,6.337,6.307,6.299,6.26,6.245,6.229,6.183,6.17,6.16,6.145,6.138,6.135,6.119,6.118,6.103,6.098,6.095,6.085,6.049,6.04,5.978,5.952,5.94,5.932,5.92,5.913,5.809,5.744,5.72,5.717,5.714,5.678,5.674,5.671,5.663,5.654,5.63,5.625,5.619,5.617,5.585,5.579,5.532,5.515,5.514,5.514,5.496,5.481,5.479,5.42,5.386,5.363,5.354,5.351,5.35,5.341,5.331,5.326,5.325,5.244,5.224,5.2,5.193,5.187,5.165,5.158,5.155,5.13,5.127,5.127,5.087,5.075,5.039,5.037,5.036,5.0,4.986,4.969,4.961,4.959,4.946,4.921,4.87,4.863,4.863,4.861,4.837,4.829,4.807,4.776,4.732,4.72,4.674,4.671,4.666,4.662,4.653,4.65,4.632,4.591,4.555,4.553,4.551,4.549,4.546,4.543,4.516,4.51,4.508,4.494,4.489,4.479,4.47,4.448,4.411,4.401,4.386,4.369,4.339,4.338,4.331,4.32,4.286,4.273,4.241,4.228,4.22,4.21,4.209,4.206,4.198,4.192,4.184,4.179,4.17,4.141,4.14,4.121,4.114,4.114,4.081,4.07,4.068,4.05,4.037,4.034,4.03,4.009,4.006,4.001,3.991,3.976,3.97,3.97,3.958,3.942,3.937,3.924,3.91,3.9,3.871,3.868,3.828,3.821,3.811,3.805,3.796,3.794,3.788,3.787,3.784,3.782,3.777,3.777,3.761,3.713,3.676,3.641,3.639,3.611,3.592,3.591,3.587,3.581,3.553,3.548,3.548,3.539,3.529,3.525,3.524,3.523,3.517,3.512,3.511,3.509,3.498,3.483,3.473,3.471,3.465,3.443,3.433,3.431,3.41,3.379,3.374,3.355,3.353,3.343,3.339,3.33,3.318,3.317,3.304,3.303,3.303,3.291,3.246,3.24,3.238,3.22,3.212,3.202,3.189,3.178,3.177,3.173,3.173,3.166,3.143,3.135,3.116,3.114,3.111,3.109,3.103,3.1,3.098,3.098,3.096,3.093,3.086,3.085,3.083,3.08,3.079,3.073,3.071,3.05,3.034,3.032,3.027,3.021,2.995,2.982,2.97,2.955,2.954,2.948,2.922,2.916,2.915,2.91,2.904,2.898,2.886,2.882,2.875,2.864,2.862,2.847,2.846,2.841,2.836,2.831,2.827,2.823,2.793,2.788,2.777,2.768,2.763,2.761,2.757,2.743,2.728,2.725,2.718,2.708,2.695,2.673,2.664,2.638,2.624,2.622,2.595,2.587,2.571,2.562,2.557,2.539,2.52,2.514,2.51,2.508,2.503,2.499,2.495,2.494,2.492,2.467,2.458,2.457,2.454,2.454,2.453,2.441,2.433,2.428,2.423,2.415,2.411,2.407,2.395,2.376,2.367,2.358,2.358,2.355,2.349,2.349,2.347,2.342,2.337,2.336,2.324,2.295,2.292,2.287,2.279,2.257,2.251,2.236,2.232,2.222,2.219,2.216,2.21,2.202,2.195,2.183,2.179,2.176,2.175,2.17,2.136,2.127,2.123,2.109,2.105,2.103,2.1,2.087,2.087,2.079,2.079,2.072,2.065,2.049,2.046,2.034,2.03,2.012,2.011,2.009,2.007,2.006,2.002,2.001,1.995,1.995,1.993,1.989,1.989,1.986,1.986,1.98,1.978,1.963,1.955,1.95,1.95,1.94,1.911,1.908,1.905,1.9,1.9,1.898,1.889,1.877,1.877,1.87,1.867,1.865,1.861,1.857,1.851,1.851,1.848,1.842,1.839,1.838,1.833,1.829,1.829,1.823,1.814,1.806,1.802,1.797,1.788,1.768,1.765,1.76,1.759,1.747,1.729,1.715,1.699,1.697,1.697,1.692,1.686,1.68,1.665,1.665,1.644,1.64,1.635,1.627,1.624,1.621,1.617,1.613,1.609,1.609,1.606,1.606,1.604,1.59,1.586,1.585,1.582,1.569,1.564,1.56,1.558,1.545,1.542,1.538,1.532,1.519,1.516,1.51,1.51,1.509,1.509,1.492,1.478,1.476,1.46,1.457,1.457,1.457,1.456,1.456,1.454,1.446,1.446,1.444,1.438,1.431,1.43,1.422,1.422,1.418,1.418,1.417,1.403,1.399,1.397,1.394,1.39,1.385,1.38,1.368,1.362,1.362,1.355,1.353,1.353,1.348,1.344,1.341,1.33,1.324,1.323,1.32,1.308,1.306,1.306,1.305,1.299,1.297,1.293,1.288,1.288,1.286,1.283,1.282,1.279,1.275,1.274,1.262,1.26,1.26,1.26,1.258,1.253,1.252,1.252,1.25,1.249,1.245,1.245,1.244,1.236,1.235,1.235,1.218,1.215,1.204,1.194,1.182,1.179,1.178,1.174,1.161,1.143,1.143,1.124,1.123,1.121,1.12,1.113,1.11,1.102,1.092,1.09,1.09,1.089,1.088,1.084,1.084,1.077,1.077,1.073,1.072,1.069,1.068,1.067,1.064,1.059,1.058,1.053,1.049,1.048,1.041,1.037,1.034,1.034,1.025,1.022,1.018,1.014,1.001,1.0,0.996,0.982,0.979,0.961,0.959,0.959,0.955,0.95,0.947,0.943,0.942,0.941,0.939,0.939,0.938,0.936,0.936,0.926,0.916,0.914,0.913,0.9,0.893,0.892,0.889,0.886,0.879,0.863,0.857,0.854,0.851,0.849,0.845,0.836,0.835,0.825,0.801,0.798,0.793,0.793,0.788,0.783,0.781,0.78,0.78,0.778,0.773,0.762,0.762,0.761,0.759,0.757,0.755,0.749,0.748,0.742,0.73,0.728,0.727,0.725,0.724,0.721,0.713,0.712,0.709,0.709,0.709,0.698,0.696,0.69,0.689,0.676,0.669,0.662,0.662,0.662,0.658,0.654,0.651,0.646,0.645,0.643,0.638,0.625,0.617,0.607,0.605,0.599,0.596,0.577,0.576,0.573,0.566,0.559,0.559,0.549,0.545,0.535,0.53,0.523,0.519,0.515,0.513,0.503,0.503,0.502,0.502,0.499,0.495,0.494,0.493,0.492,0.485,0.483,0.479,0.479,0.478,0.475,0.469,0.464,0.463,0.461,0.459,0.458,0.451,0.438,0.434,0.433,0.429,0.429,0.427,0.425,0.425,0.4,0.396,0.395,0.389,0.389,0.384,0.382,0.382,0.381,0.372,0.372,0.369,0.366,0.364,0.364,0.362,0.359,0.358,0.355,0.354,0.349,0.348,0.337,0.336,0.334,0.328,0.326,0.324,0.321,0.319,0.317,0.316,0.316,0.316,0.314,0.312,0.312,0.307,0.3,0.296,0.296,0.295,0.285,0.282,0.273,0.261,0.255,0.254,0.251,0.243,0.234,0.232,0.229,0.223,0.223,0.214,0.211,0.207,0.203,0.188,0.183,0.181,0.176,0.175,0.174,0.171,0.17,0.169,0.166,0.166,0.164,0.162,0.161,0.157,0.157,0.152,0.15,0.146,0.141,0.136,0.135,0.127,0.127,0.126,0.124,0.115,0.115,0.106,0.087,0.086,0.082,0.081,0.076,0.072,0.062,0.06,0.031,0.026,0.026,0.024,0.024,0.022,0.018,0.009,0.008],"crit":4.046,"N":958,"bh":525,"hcPlus":330.0,"hcPlus95":3.1}};
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const pct = (v, d = 1) => (100 * v).toFixed(d) + "%";
+const fmt = (n) => n.toLocaleString("en-US");
+const NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+/* ------------------------------------------------------------ leaderboard */
+const PROCS = [
+  { k: "arena", name: "Arena (site)", c: "var(--arena)", note: "What the site shows: per-model 95% intervals, separated only where they do not overlap. No multiplicity correction." },
+  { k: "holm", name: "Holm", c: "var(--holm)", note: "Pairwise z-tests for all 8,256 pairs with Holm's step-down correction. The narrowest valid procedure we found." },
+  { k: "bonferroni", name: "Bonferroni", c: "var(--bonf)", note: "Arena's intervals widened from 1.96 to 3.55 standard errors, so that all 129 hold at once with 95% probability." },
+  { k: "chi2_scheffe", name: "χ² set", c: "var(--neutral)", note: "The simultaneous confidence set of the original Arena paper, read through pairwise differences. Valid, but it protects far more than a ranking needs." },
+];
+let proc = "arena", showAll = false, openIdx = 3;
+const segB = $("#seg-board");
+PROCS.forEach((p) => {
+  const b = el("button"); b.type = "button"; b.style.setProperty("--c", p.c); b.dataset.k = p.k;
+  b.append(el("span", "sw"), document.createTextNode(p.name));
+  b.addEventListener("click", () => { proc = p.k; renderBoard(); });
+  segB.append(b);
+});
+const rangeTxt = ([b, w]) => (b === w ? `${b}` : `${b}–${w}`);
+const placeBar = (bar, [b, w], maxR) => {
+  const lo = Math.min(b, maxR), hi = Math.min(w, maxR);
+  bar.style.left = `${(100 * (lo - 1)) / maxR}%`;
+  bar.style.width = `max(0.6rem, ${(100 * (hi - lo + 1)) / maxR}%)`;
+};
+let rowEls = [], cmpEl = null;
+function renderCompare(maxR) {
+  if (cmpEl) { cmpEl.remove(); cmpEl = null; }
+  rowEls.forEach((row, i) => row.setAttribute("aria-expanded", i === openIdx));
+  if (openIdx == null || openIdx >= rowEls.length) return;
+  const r = D.board[openIdx];
+  cmpEl = el("div", "cmp"); cmpEl.id = "cmp";
+  rowEls[openIdx].setAttribute("aria-controls", "cmp");
+  PROCS.forEach((p) => {
+    const sub = el("div", "row" + (p.k === proc ? " on" : "")), nm = el("span", "nm"), sw = el("i");
+    sw.style.setProperty("--c", p.c); nm.append(sw, document.createTextNode(p.name));
+    const iv = r[p.k], trk = el("div", "trk"), bar = el("div", "bar");
+    bar.style.setProperty("--c", p.c); placeBar(bar, iv, maxR); trk.append(bar);
+    sub.append(el("span", "rk", rangeTxt(iv)), nm, el("span", "sc", `${iv[1] - iv[0] + 1} rank${iv[1] > iv[0] ? "s" : ""}`), trk);
+    cmpEl.append(sub);
+  });
+  cmpEl.append(el("p", "hint", `${r.m}: rating ${r.r.toFixed(1)} ± ${r.ci.toFixed(1)}, ${fmt(r.n)} battles. Same model, same data; only the procedure changes.`));
+  rowEls[openIdx].after(cmpEl);
+}
+function renderBoard() {
+  const P = PROCS.find((p) => p.k === proc), S = D.summary[proc];
+  segB.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === proc));
+  $("#proc-note").textContent = P.note;
+  $("#howto-bar").style.setProperty("--c", P.c);
+  const meta = $("#board-meta"); meta.replaceChildren();
+  [["Mean width, real board", S.realWidth.toFixed(1), "ranks per model"],
+   ["All 129 right, simulation", pct(S.cover), "of 1,000 datasets (target 95%)"],
+   ["True orderings found", pct(S.power),
+    S.anyFalse > 0 ? `but a false one in ${pct(S.anyFalse)} of datasets` : "never a false one in the simulation"]].forEach(([k, v, d]) => {
+    const m = el("div", "metric"); m.append(el("span", "k", k), el("span", "v", v), el("span", "d", d)); meta.append(m);
+  });
+  const rows = showAll ? D.board : D.board.slice(0, 20);
+  const maxR = showAll ? D.board.length : 45;
+  const ticks = $("#ticks"); ticks.replaceChildren();
+  const narrow = ticks.clientWidth < 300;
+  (showAll ? (narrow ? [1, 40, 80, 129] : [1, 20, 40, 60, 80, 100, 129])
+           : (narrow ? [1, 15, 30, 45] : [1, 5, 10, 15, 20, 25, 30, 35, 40, 45])).forEach((t) => {
+    const s = el("span", null, t); s.style.left = `${(100 * (t - 0.5)) / maxR}%`; ticks.append(s);
+  });
+  const box = $("#rows");
+  if (rowEls.length !== rows.length) {
+    box.replaceChildren(); cmpEl = null;
+    rowEls = rows.map((r, i) => {
+      const row = el("button", "row"); row.type = "button";
+      const trk = el("div", "trk"), bar = el("div", "bar"); trk.append(bar);
+      row.append(el("span", "rk"), el("span", "nm", r.m), el("span", "sc", `${r.r.toFixed(0)} ± ${r.ci.toFixed(1)}`), trk);
+      row.addEventListener("click", () => { openIdx = openIdx === i ? null : i; renderCompare(maxR); });
+      box.append(row);
+      return row;
+    });
+  }
+  rows.forEach((r, i) => {
+    const row = rowEls[i];
+    row.querySelector(".rk").textContent = rangeTxt(r[proc]);
+    row.setAttribute("aria-label", `${r.m}, rank ${rangeTxt(r[proc])} under ${P.name}. Show all procedures`);
+    const bar = row.querySelector(".bar");
+    placeBar(bar, r[proc], maxR);
+    bar.style.setProperty("--c", P.c);
+  });
+  renderCompare(maxR);
+  $("#toggle-all").textContent = showAll ? "Show the top 20" : "Show all 129 models";
+}
+$("#toggle-all").addEventListener("click", () => { showAll = !showAll; rowEls = []; renderBoard(); });
+let wasNarrow = null;
+addEventListener("resize", () => { const n = $("#ticks").clientWidth < 300; if (n !== wasNarrow) { wasNarrow = n; renderBoard(); } });
+renderBoard();
+
+/* ------------------------------------------------------------ theme toggle */
+(function () {
+  const btn = $("#theme-btn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const isDark = () => (root.dataset.theme ? root.dataset.theme === "dark" : mq.matches);
+  const label = () => { btn.textContent = isDark() ? "Light theme" : "Dark theme"; };
+  btn.addEventListener("click", () => {
+    root.dataset.theme = isDark() ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    label();
+  });
+  mq.addEventListener?.("change", label);
+  label();
+})();
+
+/* ------------------------------------------------------------ Q1 waffles */
+function waffle(id, bits, label) {
+  const w = $(id), frag = document.createDocumentFragment();
+  for (const ch of bits) frag.append(el("i", ch === "1" ? null : "x"));
+  w.append(frag);
+  const ok = [...bits].filter((c) => c === "1").length;
+  w.setAttribute("aria-label", `${label}: ${ok} of 1,000 datasets`);
+  return ok;
+}
+$("#w1-n").textContent = waffle("#waffle-ci", D.q1.ciAll, "All score intervals right");
+$("#w2-n").textContent = waffle("#waffle-rs", D.q1.rsAll, "All rank spreads right");
+$("#ci-each").textContent = pct(D.q1.ciEach);
+$("#rs-each").textContent = pct(D.q1.rsEach);
+$("#miss-rep").textContent = D.q1.missPerRep.toFixed(1);
+
+/* ------------------------------------------------------------ Q2 dial */
+const Z = D.sweep.z, zMin = 1.8, zMax = 4.0;
+const dial = $("#zdial"); dial.max = Z.length - 1;
+const idxOf = (z) => Z.reduce((bi, v, i) => (Math.abs(v - z) < Math.abs(Z[bi] - z) ? i : bi), 0);
+const MARKS = [["Arena", 1.96], ["Oracle", 2.1], ["Bonferroni", 3.548]];
+MARKS.forEach(([n, z]) => { const b = el("button", null, `${n} · ${z.toFixed(2)}`); b.type = "button";
+  b.addEventListener("click", () => { dial.value = idxOf(z); renderDial(); }); $("#zmarks").append(b); });
+dial.value = idxOf(1.96);
+function lineChart(svg, ys, yMin, yMax, yTicks, yFmt, target) {
+  const W = 420, H = 230, L = 44, R = 12, T = 12, B = 30;
+  const x = (z) => L + ((z - zMin) / (zMax - zMin)) * (W - L - R), y = (v) => T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B);
+  svg.replaceChildren();
+  yTicks.forEach((t) => { svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(t), y2: y(t), class: "gridline" }));
+    const tx = svgEl("text", { x: L - 6, y: y(t) + 4, "text-anchor": "end", "font-size": 11, class: "num" }); tx.textContent = yFmt(t); svg.append(tx); });
+  [2, 2.5, 3, 3.5, 4].forEach((t) => { const tx = svgEl("text", { x: x(t), y: H - 10, "text-anchor": "middle", "font-size": 11, class: "num" }); tx.textContent = t.toFixed(1); svg.append(tx); });
+  svg.append(svgEl("line", { x1: L, x2: W - R, y1: H - B, y2: H - B, class: "axisline" }));
+  const zl = svgEl("text", { x: L - 6, y: H - 10, "text-anchor": "end", "font-size": 11, "font-style": "italic" }); zl.textContent = "z"; svg.append(zl);
+  if (target != null) svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(target), y2: y(target), class: "target" }));
+  const d = Z.map((z, i) => `${i ? "L" : "M"}${x(z).toFixed(1)},${y(Math.max(yMin, Math.min(yMax, ys[i]))).toFixed(1)}`).join("");
+  svg.append(svgEl("path", { d, fill: "none", stroke: "var(--ink)", "stroke-width": 2 }));
+  MARKS.forEach(([n, z], k) => { const i = idxOf(z), c = ["var(--arena)", "var(--ink-2)", "var(--bonf)"][k];
+    svg.append(svgEl("circle", { cx: x(Z[i]), cy: y(ys[i]), r: 4, fill: c })); });
+  const cur = svgEl("g", {}); svg.append(cur);
+  return (i) => { cur.replaceChildren(
+    svgEl("line", { x1: x(Z[i]), x2: x(Z[i]), y1: T, y2: H - B, stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "2 3" }),
+    svgEl("circle", { cx: x(Z[i]), cy: y(ys[i]), r: 6, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2.5 })); };
+}
+const curCover = lineChart($("#ch-cover"), D.sweep.cover, 0.8, 1.0, [0.8, 0.85, 0.9, 0.95, 1.0], (t) => `${Math.round(100 * t)}%`, 0.95);
+const curWidth = lineChart($("#ch-width"), D.sweep.width, 7, 16, [7, 10, 13, 16], (t) => t.toFixed(0), null);
+function renderDial() {
+  const i = +dial.value, z = Z[i], c = D.sweep.cover[i];
+  $("#zval").textContent = z.toFixed(2);
+  $("#z-cover").textContent = pct(c);
+  $("#z-readout").textContent = c >= 0.95 ? "meets the 95% target" : "below the 95% target";
+  $("#z-width").textContent = D.sweep.width[i].toFixed(1);
+  curCover(i); curWidth(i);
+}
+dial.addEventListener("input", renderDial);
+renderDial();
+
+/* procedure bars */
+const PB = [["arena", "Arena (uncorrected)", "var(--arena)"], ["holm", "Holm", "var(--holm)"],
+  ["holm_onesided", "Holm, one-sided", "var(--neutral)"], ["pairwise_bonferroni", "Pairwise Bonferroni", "var(--neutral)"],
+  ["bonferroni", "Bonferroni", "var(--bonf)"], ["chi2_scheffe", "χ² set (Scheffé)", "var(--neutral)"], ["chi2", "χ² set (projected)", "var(--neutral)"]];
+const maxW = Math.max(...PB.map(([k]) => D.summary[k].width));
+PB.forEach(([k, n, c]) => { const S = D.summary[k], r = el("div", "pbar"), tr = el("div", "tr"), b = el("b");
+  b.style.width = `${(100 * S.width) / maxW}%`; b.style.setProperty("--c", c); tr.append(b);
+  r.append(el("span", "nm", n), tr, el("span", "vv", `${S.width.toFixed(1)} · ${pct(S.cover, 1)}`)); $("#pbars").append(r); });
+const leg = el("p", "cap", "Mean width of a rank interval in ranks (bar) · share of 1,000 datasets with all 129 right"); $("#pbars").prepend(leg);
+
+/* stress table */
+(function () {
+  const t = $("#stress"), head = el("tr");
+  ["World", "Arena", "Bonferroni", "Holm"].forEach((h) => head.append(el("th", null, h)));
+  const thead = el("thead"); thead.append(head); t.append(thead);
+  const tb = el("tbody");
+  D.stress.forEach((r) => { const tr = el("tr"); tr.append(el("td", null, r.world));
+    ["arena", "bonferroni", "holm"].forEach((k) => { const td = el("td", "num"), s = el("span", "pill" + (r[k] < 0.95 ? " low" : ""), pct(r[k], 1)); td.append(s); tr.append(td); });
+    tb.append(tr); });
+  t.append(tb);
+})();
+
+/* ------------------------------------------------------------ Q3 heatmap */
+(function () {
+  const Q = D.q3, hm = $("#hm"), tip = $("#tip"), noise = $("#noise");
+  const lookup = new Map(Q.cells.map((c) => [`${c.m}|${c.c}`, c]));
+  const sign = (v) => (v > 0 ? "+" : v < 0 ? "−" : "");
+  hm.append(el("div", "h corner", ""));
+  const SHORT = ["Code", "Math", "Instr.", "Hard", "Chin.", "Rus.", "Multi", "Long"];
+  Q.cats.forEach((c, i) => { const h = el("div", "h"); h.title = c; h.append(el("span", "f", c), el("span", "s", SHORT[i])); hm.append(h); });
+  const grid = [], tested = [];
+  const passes = (c) => Math.abs(c.z) / +noise.value > Q.crit;
+  const describe = (m, cat, c) => !c ? `${m}, ${cat}: under 200 battles, not tested`
+    : `${m}, ${cat}: ${sign(c.pts)}${Math.abs(c.pts).toFixed(1)} points, z* ${sign(c.z)}${Math.abs(c.z).toFixed(1)}, ${passes(c) ? "passes" : "does not pass"} Bonferroni`;
+  let tipFor = null;
+  const show = (b, m, cat, c) => {
+    tipFor = [b, m, cat, c];
+    tip.replaceChildren(el("div", null, m), el("div", null, cat));
+    if (c) tip.append(el("div", "num", `${sign(c.pts)}${Math.abs(c.pts).toFixed(1)} rating points · z* = ${sign(c.z)}${Math.abs(c.z).toFixed(1)}`),
+      el("div", null, `${fmt(c.n)} battles in the category`),
+      el("div", null, passes(c) ? `Passes Bonferroni at noise × ${(+noise.value).toFixed(1)}` : `Not significant at noise × ${(+noise.value).toFixed(1)}`));
+    else tip.append(el("div", null, "Under 200 battles, not tested"));
+    tip.hidden = false;
+    const r = b.getBoundingClientRect();
+    const x = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2));
+    const y = r.top - tip.offsetHeight - 8 < 8 ? r.bottom + 8 : r.top - tip.offsetHeight - 8;
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  };
+  const hide = () => { tip.hidden = true; tipFor = null; };
+  const onScroll = () => { if (tipFor && document.activeElement === tipFor[0]) show(...tipFor); else hide(); };
+  Q.models.forEach((m, mi) => {
+    const name = el("div", "m", m); name.title = m; hm.append(name);
+    grid.push([]);
+    Q.cats.forEach((cat, ci) => {
+      const c = lookup.get(`${m}|${ci}`), b = el("button", "c");
+      b.type = "button"; b.tabIndex = mi === 0 && ci === 0 ? 0 : -1;
+      if (!c) b.classList.add("na");
+      else {
+        const a = Math.min(1, Math.abs(c.pts) / 80);
+        b.style.background = `color-mix(in srgb, ${c.pts > 0 ? "var(--pos)" : "var(--neg)"} ${Math.round(a * 85)}%, var(--mid))`;
+        tested.push([b, c, m, cat]);
+      }
+      b.setAttribute("aria-label", describe(m, cat, c));
+      b.addEventListener("mouseenter", () => show(b, m, cat, c)); b.addEventListener("focus", () => show(b, m, cat, c));
+      b.addEventListener("mouseleave", () => { if (document.activeElement !== b) hide(); }); b.addEventListener("blur", hide);
+      b.addEventListener("keydown", (ev) => {
+        const d = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[ev.key];
+        if (!d) return;
+        ev.preventDefault();
+        const nm = Math.max(0, Math.min(Q.models.length - 1, mi + d[0])), nc = Math.max(0, Math.min(Q.cats.length - 1, ci + d[1]));
+        b.tabIndex = -1; const t = grid[nm][nc]; t.tabIndex = 0; t.focus();
+      });
+      grid[mi].push(b); hm.append(b);
+    });
+  });
+  $("#grad").style.background = "linear-gradient(90deg, var(--neg), var(--mid), var(--pos))";
+  $("#crit-v").textContent = Q.crit.toFixed(2);
+  const render = () => {
+    const k = +noise.value;
+    $("#noise-v").textContent = k.toFixed(1);
+    noise.setAttribute("aria-valuetext", `noise ${k.toFixed(1)} times the null`);
+    $("#hm-count").textContent = Q.allZ.filter((z) => z / k > Q.crit).length;
+    tested.forEach(([b, c, m, cat]) => { b.classList.toggle("sig", passes(c)); b.setAttribute("aria-label", describe(m, cat, c)); });
+  };
+  noise.addEventListener("input", render); render();
+  addEventListener("scroll", onScroll, { passive: true });
+  $(".hm-wrap").addEventListener("scroll", onScroll, { passive: true });
+})();
+</script>
+</body>
+</html>
