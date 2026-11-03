@@ -275,7 +275,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <div class="stack col">
         <p class="eyebrow">Chatbot Arena · Bradley–Terry · multiple testing</p>
         <h1 id="h-hero">How certain is the Chatbot&nbsp;Arena leaderboard?</h1>
-        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing 129 models at once. We measured how often these ranges contain the true ranks, and how much wider they become under multiplicity corrections.</p>
+        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing all the models at once. On the 2024 board of 129 models, we measured how often these ranges contain the true ranks, and how much wider they become under multiplicity corrections.</p>
       </div>
       <div class="glance" aria-label="Main findings">
         <div class="g"><span class="gq">Q1</span><span class="gv">90.9%</span><span class="gk">of simulated leaderboards have all 129 rank spreads right. The target is 95%.</span></div>
@@ -321,9 +321,8 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <section aria-labelledby="h-q1">
     <div class="sec-head col">
       <p class="eyebrow">Q1 · Coverage</p>
-      <h2 id="h-q1">How often is the whole table of rank spreads right?</h2>
-      <p class="answer">In 90.9% of simulated leaderboards, a little short of the 95% target. The two effects above nearly offset each other.</p>
-      <p>True ranks are unknown on real data, so we simulate data from a model whose ranks we know. Each square below is one simulated leaderboard.</p>
+      <h2 id="h-q1">Coverage of Arena's rank spreads</h2>
+      <p>All 129 rank spreads are right in 90.9% of simulated leaderboards, a little short of the 95% target, because the two effects above nearly offset each other. True ranks are unknown on real data, so we simulate data from a model whose ranks we know. Each square below is one simulated leaderboard.</p>
     </div>
     <ol class="steps" aria-label="How the simulation works">
       <li><strong>Set the true strengths</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
@@ -353,9 +352,8 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <section aria-labelledby="h-q2">
     <div class="sec-head col">
       <p class="eyebrow">Q2 · Corrections</p>
-      <h2 id="h-q2">How wide do corrected rank intervals have to be?</h2>
-      <p class="answer" style="--c:var(--holm)">Of the corrections we compared, pairwise tests with Holm's step-down correction gave the narrowest intervals. They held in all 1,000 datasets with a mean width of 11.3 ranks, compared with 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper.</p>
-      <p>As a benchmark, Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. The slider changes <em>z</em> and shows coverage and width over the same 1,000 simulated datasets.</p>
+      <h2 id="h-q2">Width of corrected rank intervals</h2>
+      <p>Of the corrections we compared, pairwise tests with Holm's step-down correction gave the narrowest intervals: a mean width of 11.3 ranks, compared with 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper, with all 129 intervals right in all 1,000 datasets. As a benchmark, Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. The slider changes <em>z</em> and shows coverage and width over the same 1,000 simulated datasets.</p>
     </div>
     <div class="dial">
       <div class="dial-top">
@@ -388,7 +386,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <h3 class="col">Stress tests with tied models</h3>
       <p class="col">The real 2024 strengths have few near-ties, so all corrections are far above the target there. We reran the simulation with tied and nearly tied models, where errors are more likely. Share of 1,000 datasets in which all rank intervals are right:</p>
       <div class="tbl-wrap"><table id="stress"></table></div>
-      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads drop to 0.2–67% when models are tied. Holm stays above 95% in all six worlds we tested. Its guarantee is proven for exact ties; for near ties we only have these simulations, in which its error rate was lower.</p>
+      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads drop to 0.2–67% when models are tied. Holm stays above 95% in all ten worlds we tested (six are shown). Its guarantee is proven for exact ties; for near ties we only have these simulations, in which its error rate was lower.</p>
     </div>
   </section>
 
@@ -396,9 +394,8 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <section aria-labelledby="h-q3">
     <div class="sec-head col">
       <p class="eyebrow">Q3 · Category leaderboards</p>
-      <h2 id="h-q3">Are category "specialties" real?</h2>
-      <p class="answer" style="--c:var(--pos)">Some clearly are, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry.</p>
-      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject "no specialties at all" with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
+      <h2 id="h-q3">Category specialties</h2>
+      <p>Some category differences are clearly real, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry. Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject "no specialties at all" with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
     </div>
     <div class="hm-controls">
       <div class="slider">
@@ -413,7 +410,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <div class="scale"><span>−80</span><span class="grad" id="grad"></span><span>+80 rating points</span></div>
       <div class="legend"><span><i style="background:var(--ink);border-radius:50%"></i>passes Bonferroni</span><span><i style="outline:1px dashed var(--muted);background:transparent"></i>under 200 battles, not tested</span></div>
     </div>
-    <p class="col small" style="margin-top:1.2rem">Red: stronger in that category than overall; blue: weaker. The largest effects are about language. Llama 3 70B is 73 points weaker in Chinese than overall, while all nine Qwen models are 50–84 points stronger in Chinese, eight of them significantly. The null redraws every vote independently. On the real board the <em>z</em>* have a robust spread of 3.3 instead of 1, which could be real specialties or extra noise the null leaves out, such as many votes from the same user. If the noise were 2 or 3 times the null's, Bonferroni would flag 76 or 26 pairs; even at 4 times, seven remain, five of them about language.</p>
+    <p class="col small" style="margin-top:1.2rem">Red: stronger in that category than overall; blue: weaker. The largest effects are about language. Llama 3 70B is 73 points weaker in Chinese than overall, while all nine Qwen models are 50–84 points stronger in Chinese, eight of them significantly. Language is also where the voters differ most, since Chinese prompts are judged by a different group of users, so a language specialty may reflect voter preferences as much as model ability. The null redraws every vote independently. On the real board the <em>z</em>* have a robust spread of 3.3 instead of 1, which could be real specialties or extra noise the null leaves out, such as many votes from the same user. If the noise were 2 or 3 times the null's, Bonferroni would flag 76 or 26 pairs; even at 4 times, seven remain, five of them about language. We have not estimated this factor.</p>
   </section>
 
   <!-- ============================================================ takeaways -->
