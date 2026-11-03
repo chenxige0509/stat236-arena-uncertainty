@@ -307,12 +307,12 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
     <div class="two">
       <div class="stack col">
         <p>Each model gets a Bradley–Terry rating and a 95% interval. Its best rank is one plus the number of models whose whole interval sits above its own; its worst rank is one plus the number whose interval reaches above its lower end. We refit the public 2024 battle data with Arena's own code and matched the published ratings to a median of 0.06 points. On today's site every interval on all 4,773 published 2026 text boards is exactly the rating ± 1.96 standard errors, and the formula reproduces both ends of the displayed spread for all 59 models we recorded.</p>
-        <p>The original Arena paper says a ranking needs intervals that hold <em>simultaneously</em>. The site's intervals hold one model at a time. That creates two errors that pull in opposite directions.</p>
+        <p>The original Arena paper says a ranking needs intervals that hold <em>simultaneously</em>. The site's intervals hold one model at a time. This has two effects that pull in opposite directions.</p>
       </div>
-      <div class="rule-box" aria-label="The two errors">
+      <div class="rule-box" aria-label="The two effects">
         <div class="formula">best&nbsp;&nbsp;= 1 + #{ models with L &gt; my U }<br>worst = 1 + #{ others with U &gt; my L }</div>
-        <div class="err"><span class="sign">−</span><p class="small"><strong>Score intervals miss.</strong> 5% of 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
-        <div class="err"><span class="sign">+</span><p class="small"><strong>The overlap rule is strict.</strong> Two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
+        <div class="err"><span class="sign">−</span><p class="small">Without a correction, 5% of the 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
+        <div class="err"><span class="sign">+</span><p class="small">The overlap rule works the other way: two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
       </div>
     </div>
   </section>
@@ -326,10 +326,10 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <p>True ranks are unknown on real data, so we simulate data from a model whose ranks we know. Each square below is one simulated leaderboard.</p>
     </div>
     <ol class="steps" aria-label="How the simulation works">
-      <li><strong>Fix a true world</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
-      <li><strong>Replay the battles</strong><span>Keep every real matchup and redraw who won (or tied) from the true win probabilities.</span></li>
-      <li><strong>Rerun the method</strong><span>Refit, build Arena's intervals and rank spreads, and the corrected versions for Q2.</span></li>
-      <li><strong>Score it, 1,000 times</strong><span>Check every interval against the known truth. Coverage is the share of datasets in which all 129 hold.</span></li>
+      <li><strong>Set the true strengths</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
+      <li><strong>Redraw the outcomes</strong><span>Keep every real matchup and redraw who won (or tied) from the true win probabilities.</span></li>
+      <li><strong>Refit</strong><span>Fit Bradley–Terry to the new outcomes, then build Arena's intervals and rank spreads, and the corrected versions for Q2.</span></li>
+      <li><strong>Repeat 1,000 times</strong><span>Check every interval against the known truth. Coverage is the share of datasets in which all 129 hold.</span></li>
     </ol>
     <div class="waffles">
       <div class="waffle-block">
@@ -346,7 +346,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       </div>
     </div>
     <div class="legend" style="margin-top:1.2rem"><span><i style="background:var(--hit)"></i>every interval right</span><span><i style="background:var(--miss)"></i>at least one wrong</span></div>
-    <p class="col small" style="margin-top:1.4rem">Nothing in Arena's method targets the 90.9%; it depends on how many models happen to be nearly tied (see the stress test in Q2). Across models, spread width is most closely related to crowding: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
+    <p class="col small" style="margin-top:1.4rem">Arena's method does not aim at this 90.9%. The number depends on how many models are nearly tied (see the stress tests in Q2). Across models, spread width is most closely related to crowding: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
   </section>
 
   <!-- ============================================================ Q2 -->
@@ -396,9 +396,9 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <section aria-labelledby="h-q3">
     <div class="sec-head col">
       <p class="eyebrow">Q3 · Category leaderboards</p>
-      <h2 id="h-q3">Are category “specialties” real?</h2>
+      <h2 id="h-q3">Are category "specialties" real?</h2>
       <p class="answer" style="--c:var(--pos)">Some clearly are, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry.</p>
-      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject “no specialties at all” with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
+      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject "no specialties at all" with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
     </div>
     <div class="hm-controls">
       <div class="slider">
@@ -422,10 +422,10 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
     <div class="takeaways">
       <div class="tk"><span class="n">Q1</span><h3>Coverage of Arena's rank spreads</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because the two effects roughly offset each other. The method does not target this number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
       <div class="tk"><span class="n">Q2</span><h3>Pairwise tests with Holm</h3><p class="small">A ranking depends only on the signs of pairwise differences. Pairwise tests with Holm met the 95% target in all our simulations, with intervals 18% narrower than Bonferroni's and three to four times narrower than the χ² set's.</p></div>
-      <div class="tk"><span class="n">Real board</span><h3>223 orderings not supported by Holm</h3><p class="small">Of the 7,808 “A beats B” statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
+      <div class="tk"><span class="n">Real board</span><h3>223 orderings not supported by Holm</h3><p class="small">Of the 7,808 "A beats B" statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
       <div class="tk"><span class="n">Q3</span><h3>Category specialties</h3><p class="small">The largest effects are language effects of 50–84 rating points. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
     </div>
-    <p class="col small" style="margin-top:1.8rem"><strong>Limits.</strong> The simulation treats battles as independent and strengths as fixed, uses one 2024 snapshot with 129 models (today's board has about 400), and relies on normal approximations. Correlated votes would likely lower Arena's coverage further.</p>
+    <p class="col small" style="margin-top:1.8rem">The simulation treats battles as independent and strengths as fixed, uses one 2024 snapshot with 129 models (today's board has about 400), and relies on normal approximations. Correlated votes would likely lower Arena's coverage further.</p>
   </section>
 
   <footer>
