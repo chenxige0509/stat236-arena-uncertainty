@@ -275,11 +275,11 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <div class="stack col">
         <p class="eyebrow">Chatbot Arena · Bradley–Terry · multiple testing</p>
         <h1 id="h-hero">How certain is the Chatbot&nbsp;Arena leaderboard?</h1>
-        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing 129 models at once. We measured how often it is right, which corrections fix it, and what they cost.</p>
+        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing 129 models at once. We measured how often these ranges contain the true ranks, and how much wider they become under multiplicity corrections.</p>
       </div>
       <div class="glance" aria-label="Main findings">
         <div class="g"><span class="gq">Q1</span><span class="gv">90.9%</span><span class="gk">of simulated leaderboards have all 129 rank spreads right. The target is 95%.</span></div>
-        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width with pairwise tests and Holm's correction, the narrowest valid fix we found (Bonferroni: 13.6).</span></div>
+        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width with pairwise tests and Holm's correction, the narrowest of the corrections, all of which reached the 95% target in our simulations (Bonferroni: 13.6).</span></div>
         <div class="g"><span class="gq">Q3</span><span class="gv">275 of 958</span><span class="gk">model–category pairs pass Bonferroni as specialties, if our null's noise level is right.</span></div>
       </div>
       </div>
@@ -311,8 +311,8 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       </div>
       <div class="rule-box" aria-label="The two errors">
         <div class="formula">best&nbsp;&nbsp;= 1 + #{ models with L &gt; my U }<br>worst = 1 + #{ others with U &gt; my L }</div>
-        <div class="err"><span class="sign">−</span><p class="small"><strong>Too narrow.</strong> 5% of 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
-        <div class="err"><span class="sign">+</span><p class="small"><strong>Too cautious.</strong> Two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
+        <div class="err"><span class="sign">−</span><p class="small"><strong>Score intervals miss.</strong> 5% of 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
+        <div class="err"><span class="sign">+</span><p class="small"><strong>The overlap rule is strict.</strong> Two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
       </div>
     </div>
   </section>
@@ -320,10 +320,10 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <!-- ============================================================ Q1 -->
   <section aria-labelledby="h-q1">
     <div class="sec-head col">
-      <p class="eyebrow">Q1 · Diagnosis</p>
+      <p class="eyebrow">Q1 · Coverage</p>
       <h2 id="h-q1">How often is the whole table of rank spreads right?</h2>
-      <p class="answer">In 90.9% of simulated leaderboards, a little short of the 95% target. The two errors above almost cancel.</p>
-      <p>We cannot check real ranks against the truth, so we built a world where the truth is known. Each square below is one simulated leaderboard.</p>
+      <p class="answer">In 90.9% of simulated leaderboards, a little short of the 95% target. The two effects above nearly offset each other.</p>
+      <p>True ranks are unknown on real data, so we simulate data from a model whose ranks we know. Each square below is one simulated leaderboard.</p>
     </div>
     <ol class="steps" aria-label="How the simulation works">
       <li><strong>Fix a true world</strong><span>Fit Bradley–Terry to the 1.66 million real battles and treat that fit as the true strengths and ranks.</span></li>
@@ -346,16 +346,16 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       </div>
     </div>
     <div class="legend" style="margin-top:1.2rem"><span><i style="background:var(--hit)"></i>every interval right</span><span><i style="background:var(--miss)"></i>at least one wrong</span></div>
-    <p class="col small" style="margin-top:1.4rem">Nothing in Arena's method targets the 90.9%; it depends on how many models happen to be nearly tied (see the stress test in Q2). Which ranks are shaky? Crowding matters most: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
+    <p class="col small" style="margin-top:1.4rem">Nothing in Arena's method targets the 90.9%; it depends on how many models happen to be nearly tied (see the stress test in Q2). Across models, spread width is most closely related to crowding: the number of models within 10 rating points of a model has rank correlation 0.79 with the width of its spread. Strength itself barely matters once crowding and the standard error are accounted for.</p>
   </section>
 
   <!-- ============================================================ Q2 -->
   <section aria-labelledby="h-q2">
     <div class="sec-head col">
-      <p class="eyebrow">Q2 · Repair</p>
-      <h2 id="h-q2">Which correction fixes the spreads, and what does it cost?</h2>
-      <p class="answer" style="--c:var(--holm)">Testing each pair of models directly, with Holm's step-down correction. Its spreads held in all 1,000 datasets at a mean width of 11.3 ranks, against 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper.</p>
-      <p>First, how wide do the spreads need to be? Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. Drag the multiplier, or use the three buttons, and see what the whole leaderboard does across the same 1,000 simulated datasets.</p>
+      <p class="eyebrow">Q2 · Corrections</p>
+      <h2 id="h-q2">How wide do corrected rank intervals have to be?</h2>
+      <p class="answer" style="--c:var(--holm)">Of the corrections we compared, pairwise tests with Holm's step-down correction gave the narrowest intervals. They held in all 1,000 datasets with a mean width of 11.3 ranks, compared with 13.6 for Bonferroni and 33–43 for the χ² set of the original Arena paper.</p>
+      <p>As a benchmark, Arena's intervals are rating ± <em>z</em> × standard error with <em>z</em> = 1.96. The slider changes <em>z</em> and shows coverage and width over the same 1,000 simulated datasets.</p>
     </div>
     <div class="dial">
       <div class="dial-top">
@@ -372,23 +372,23 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
         <figure style="margin:0"><svg id="ch-cover" viewBox="0 0 420 230" role="img" aria-label="Share of datasets with all rank spreads right, against z"></svg><figcaption class="cap">All 129 rank spreads right, by <em>z</em>. Dashed: the 95% target.</figcaption></figure>
         <figure style="margin:0"><svg id="ch-width" viewBox="0 0 420 230" role="img" aria-label="Mean rank spread width against z"></svg><figcaption class="cap">Mean width of a rank spread, in ranks.</figcaption></figure>
       </div>
-      <p class="small">The smallest <em>z</em> that reaches 95% is about 2.1. That choice uses the true ranks, so no real procedure can make it; it shows how little extra width the table actually needs.</p>
+      <p class="small">The smallest <em>z</em> that reaches 95% is about 2.1. Finding it requires the true ranks, so it is a benchmark rather than a usable procedure. It is only slightly wider than Arena's spreads.</p>
     </div>
 
     <div class="two" style="margin-top:2.6rem">
       <div class="stack col">
-        <h3>Six valid fixes, very different prices</h3>
-        <p>Every correction below keeps all 129 rank intervals right in all 1,000 datasets. They differ in how much width they spend doing it. The χ² set from the original Arena paper protects every linear combination of the 129 scores, far more than a ranking needs. A ranking only needs the sign of each pairwise difference, so testing each pair of models directly is cheaper, and Holm's step-down procedure is the cheapest.</p>
-        <p class="small">Holm sorts the 8,256 pairs by |<em>z</em>| of their rating gap. The largest must clear the Bonferroni bar of 4.52; each rejection lowers the bar for the rest, down to 3.96 on average here because thousands of pairs are clear-cut. A one-sided version of Holm, whose control of wrong orderings is fully proven, never goes below 4.38 and needs 12.4 ranks.</p>
+        <h3>Width of six corrected procedures</h3>
+        <p>Every correction below keeps all 129 rank intervals right in all 1,000 datasets, but their widths differ by a factor of four. The χ² set from the original Arena paper controls every linear combination of the 129 scores, while a ranking depends only on the sign of each pairwise difference. Testing each pair directly therefore gives narrower intervals, and Holm's step-down procedure the narrowest.</p>
+        <p class="small">Holm sorts the 8,256 pairs by |<em>z</em>| of their rating gap. The largest must clear the Bonferroni bar of 4.52; each rejection lowers the bar for the rest, down to 3.96 on average here because thousands of pairs are clear-cut. For the two-sided Holm procedure, control of wrong orderings is proven only for exactly tied pairs; for other pairs we checked it by simulation. A one-sided version of Holm has a full proof, never goes below 4.38 and needs 12.4 ranks.</p>
       </div>
       <div class="pbars" id="pbars" aria-label="Mean rank interval width by procedure"></div>
     </div>
 
     <div style="margin-top:2.6rem" class="stack">
-      <h3 class="col">Stress test: what happens when models are tied?</h3>
-      <p class="col">The real 2024 strengths have few near-ties, so every correction looks overly safe. We rebuilt the world with tied models, where the guarantees are actually tested. Share of 1,000 datasets in which all rank intervals are right:</p>
+      <h3 class="col">Stress tests with tied models</h3>
+      <p class="col">The real 2024 strengths have few near-ties, so all corrections are far above the target there. We reran the simulation with tied and nearly tied models, where errors are more likely. Share of 1,000 datasets in which all rank intervals are right:</p>
       <div class="tbl-wrap"><table id="stress"></table></div>
-      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads collapse once ties exist. Holm stays above 95% everywhere; its guarantee is a theorem for exact ties, and the near-tie world, where no theorem applies, turns out to be easier.</p>
+      <p class="cap col">Shaded: below the 95% target. Arena's uncorrected spreads drop to 0.2–67% when models are tied. Holm stays above 95% in all six worlds we tested. Its guarantee is proven for exact ties; for near ties we only have these simulations, in which its error rate was lower.</p>
     </div>
   </section>
 
@@ -398,7 +398,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <p class="eyebrow">Q3 · Category leaderboards</p>
       <h2 id="h-q3">Are category “specialties” real?</h2>
       <p class="answer" style="--c:var(--pos)">Some clearly are, above all language effects of 50 to 84 rating points. How many are real is less certain: between 275 and 26 of 958 pairs, depending on how much noise the votes carry.</p>
-      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject “no specialties at all” with <em>p</em> = 0.002, the smallest value 500 null draws can give. The open question is how many pairs to flag.</p>
+      <p>Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject “no specialties at all” with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
     </div>
     <div class="hm-controls">
       <div class="slider">
@@ -418,12 +418,12 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
 
   <!-- ============================================================ takeaways -->
   <section aria-labelledby="h-take">
-    <div class="sec-head col"><p class="eyebrow">What we learned</p><h2 id="h-take">Takeaways</h2></div>
+    <div class="sec-head col"><p class="eyebrow">Summary</p><h2 id="h-take">Main results</h2></div>
     <div class="takeaways">
-      <div class="tk"><span class="n">Q1</span><h3>Nearly right by accident</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because two errors roughly cancel. Nothing in the method targets that number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
-      <div class="tk"><span class="n">Q2</span><h3>Test the pairs a ranking needs</h3><p class="small">A ranking only needs the signs of pairwise differences. Pairwise tests with Holm give valid spreads 18% narrower than Bonferroni and about three to four times narrower than the χ² set.</p></div>
-      <div class="tk"><span class="n">Real board</span><h3>223 orderings do not survive</h3><p class="small">Of the 7,808 “A beats B” statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
-      <div class="tk"><span class="n">Q3</span><h3>Specialties exist; counting them is harder</h3><p class="small">Language effects are large and unmistakable. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
+      <div class="tk"><span class="n">Q1</span><h3>Coverage of Arena's rank spreads</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because the two effects roughly offset each other. The method does not target this number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
+      <div class="tk"><span class="n">Q2</span><h3>Pairwise tests with Holm</h3><p class="small">A ranking depends only on the signs of pairwise differences. Pairwise tests with Holm met the 95% target in all our simulations, with intervals 18% narrower than Bonferroni's and three to four times narrower than the χ² set's.</p></div>
+      <div class="tk"><span class="n">Real board</span><h3>223 orderings not supported by Holm</h3><p class="small">Of the 7,808 “A beats B” statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
+      <div class="tk"><span class="n">Q3</span><h3>Category specialties</h3><p class="small">The largest effects are language effects of 50–84 rating points. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
     </div>
     <p class="col small" style="margin-top:1.8rem"><strong>Limits.</strong> The simulation treats battles as independent and strengths as fixed, uses one 2024 snapshot with 129 models (today's board has about 400), and relies on normal approximations. Correlated votes would likely lower Arena's coverage further.</p>
   </section>
@@ -447,9 +447,9 @@ const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for
 /* ------------------------------------------------------------ leaderboard */
 const PROCS = [
   { k: "arena", name: "Arena (site)", c: "var(--arena)", note: "What the site shows: per-model 95% intervals, separated only where they do not overlap. No multiplicity correction." },
-  { k: "holm", name: "Holm", c: "var(--holm)", note: "Pairwise z-tests for all 8,256 pairs with Holm's step-down correction. The narrowest valid procedure we found." },
+  { k: "holm", name: "Holm", c: "var(--holm)", note: "Pairwise z-tests for all 8,256 pairs with Holm's step-down correction. The narrowest of the corrected procedures in our simulations." },
   { k: "bonferroni", name: "Bonferroni", c: "var(--bonf)", note: "Arena's intervals widened from 1.96 to 3.55 standard errors, so that all 129 hold at once with 95% probability." },
-  { k: "chi2_scheffe", name: "χ² set", c: "var(--neutral)", note: "The simultaneous confidence set of the original Arena paper, read through pairwise differences. Valid, but it protects far more than a ranking needs." },
+  { k: "chi2_scheffe", name: "χ² set", c: "var(--neutral)", note: "The simultaneous confidence set of the original Arena paper, read through pairwise differences. It controls far more than a ranking needs, so its intervals are wide." },
 ];
 let proc = "arena", showAll = false, openIdx = 3;
 const segB = $("#seg-board");
