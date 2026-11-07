@@ -1,3 +1,8 @@
+Historical power-grid run (before the 2026-11-07 HC numerical correction).
+Legacy FDP/spill labels below denote the custom attribution diagnostics now named
+attribution_error_share/same_model_unplanted_share in q3_sim.csv; they do not validate standard FDR.
+The original run output is preserved below.
+
 delta for mu = 1, in rating points: median 5.9 [1.2, 20.1]
 critical values from 400 fresh null draws: hc 5.01, hc_plus 3.26, max_abs_z 4.11, chi2 1.04e+03
 size on 400 more null draws (nominal 0.05, MC SE 0.011): hc 0.060, hc_plus 0.050, max_abs_z 0.052, chi2 0.083  (204s)

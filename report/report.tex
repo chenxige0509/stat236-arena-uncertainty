@@ -134,7 +134,7 @@ To test whether \emph{any} specialty exists we use Higher Criticism,
 \[
 \mathrm{HC} = \max_{k \le N/2} \frac{\sqrt N\,(k/N - p_{(k)})}{\sqrt{p_{(k)}(1 - p_{(k)})}},
 \]
-its variant HC$^+$ restricted to $p_{(k)} > 1/N$, the maximum-$|z^*|$ test (min-$P$) and $\chi^2 = \sum z^{*2}$, each with its $p$-value from the null draws. To find \emph{which} pairs, we use Bonferroni at family-wise level 5\% and Benjamini--Hochberg \citep{benjamini1995controlling} at false discovery rate 10\%. For power, we plant $s = N^{1-\vartheta}$ specialties with random signs at random pairs, for $\vartheta \in \{0.2, 0.3, \dots, 0.7\}$, with strength set so that each planted $z$ has mean $\mu = \sqrt{2r\log N}$ before the refit, for $r \in \{0.1, 0.2, 0.4, 0.8, 1.5\}$; 200 replicates per cell, with critical values from fresh null draws.
+its variant HC$^+$ restricted to $p_{(k)} > 1/N$, the maximum-$|z^*|$ test (min-$P$) and $\chi^2 = \sum z^{*2}$, each with its $p$-value from the null draws. To find \emph{which} pairs, we use Bonferroni at nominal family-wise level 5\% and Benjamini--Hochberg \citep{benjamini1995controlling} at nominal false discovery rate 10\%. For power, we plant $s = N^{1-\vartheta}$ specialties with random signs at random pairs, for $\vartheta \in \{0.2, 0.3, \dots, 0.7\}$, with strength set so that each planted $z$ has mean $\mu = \sqrt{2r\log N}$ before the refit, for $r \in \{0.1, 0.2, 0.4, 0.8, 1.5\}$; 200 replicates per cell, with critical values from fresh null draws.
 
 \begin{figure}[t]
 \centering
@@ -181,7 +181,7 @@ In the near-tie worlds, where Holm has no proven guarantee, its error rate is 1.
 
 \begin{table}[t]
 \centering\small
-\caption{Q3 on the 2024 board ($N = 958$ tested pairs). The null distribution comes from 500 parametric-bootstrap draws, so the smallest attainable $p$-value is $1/501$. Plain HC is dominated by the most extreme $p$-values, since it grows like $p^{-1/2}$ (the smallest underflows to 0 and is dropped; the next is $2.8 \times 10^{-127}$); HC$^+$, which uses only $p > 1/N$, is the usable form.}\label{tab:q3}
+\caption{Q3 on the 2024 board ($N = 958$ tested pairs). The null distribution comes from 500 parametric-bootstrap draws, so the smallest attainable $p$-value is $1/501$. Plain HC is dominated by the smallest $p$-value ($\log_{10}p \approx -353.6$); we compute it from log normal tails to avoid underflow. HC$^+$ uses only $p > 1/N$ and excludes these extreme tails.}\label{tab:q3}
 \begin{tabular}{@{}lrrr@{}}
 \toprule
 Test & Observed & Null 95\% point & $p$ \\
@@ -189,7 +189,7 @@ Test & Observed & Null 95\% point & $p$ \\
 HC$^+$ & 330 & 3.1 & $1/501$ \\
 $\chi^2$ & 21{,}210 & 1{,}028 & $1/501$ \\
 min-$P$ ($\max|z^*|$) & 40.3 & 4.05 & $1/501$ \\
-HC & $1.2 \times 10^{62}$ & 4.4 & $1/501$ \\
+HC & $1.98 \times 10^{175}$ & 4.4 & $1/501$ \\
 \bottomrule
 \end{tabular}
 
@@ -199,7 +199,7 @@ The 2024 category effects depart substantially from the null (\cref{fig:q3}a, \c
 
 The evidence that specialties exist is stronger than the evidence for any particular count. The null does not account for correlated votes (same user or session, clusters in time) and any misfit of the BT model, and the robust SD of the observed $z^*$ is 3.3 rather than 1 (an overstatement of the noise, since it includes the true specialties). If the true noise were 1.5, 2 or 3 times the null's, Bonferroni would flag 149, 76 or 26 pairs instead of 275; we have not estimated this factor.
 
-The power simulation (\cref{fig:q3}b,c) reproduces the qualitative predictions of the Rare/Weak model, in which $s = N^{1-\vartheta}$ signals of size $\mu$ are detectable only above a boundary in $(\vartheta, r)$. With 31 planted specialties ($\vartheta = 0.5$) at $r = 0.4$, HC and HC$^+$ have power 0.88 and 0.95 and min-$P$ only 0.56, and with 122 ($\vartheta = 0.3$) at $r = 0.2$ min-$P$ reaches only 0.57 while $\chi^2$ and HC$^+$ reach 1.00. With 8 ($\vartheta = 0.7$) $\chi^2$ falls behind, as the theory predicts: at $r = 0.8$ its power is 0.62, min-$P$ 0.74, HC 0.85 and HC$^+$ 0.72. HC leads min-$P$ by about four Monte Carlo SEs, but HC$^+$, the form used on the real board, does not beat min-$P$ here, and at $\vartheta = 0.7$ the theoretical boundaries of HC and the max test nearly coincide. (For $\vartheta < 1/2$ every test is asymptotically powerful at fixed $\mu$, so the differences there are finite-$N$ effects.) For identification, BH finds 76--93\% of the strongest planted specialties ($r = 1.5$, about 27 rating points at the median pair) and Bonferroni about 53\%; in between lies a wide region where $\chi^2$ and HC$^+$ detect specialties that neither Bonferroni nor BH can locate. On the real board, the global statistics are one to two orders of magnitude above their null 95\% points, well beyond this detection-only region.
+The power simulation (\cref{fig:q3}b,c) reproduces the qualitative predictions of the Rare/Weak model, in which $s = N^{1-\vartheta}$ signals of size $\mu$ are detectable only above a boundary in $(\vartheta, r)$. With 31 planted specialties ($\vartheta = 0.5$) at $r = 0.4$, HC and HC$^+$ have power 0.88 and 0.95 and min-$P$ only 0.56, and with 122 ($\vartheta = 0.3$) at $r = 0.2$ min-$P$ reaches only 0.57 while $\chi^2$ and HC$^+$ reach 1.00. With 8 ($\vartheta = 0.7$) $\chi^2$ falls behind, as the theory predicts: at $r = 0.8$ its power is 0.62, min-$P$ 0.74, HC 0.85 and HC$^+$ 0.72. HC leads min-$P$ by about four Monte Carlo SEs, but HC$^+$, the form used on the real board, does not beat min-$P$ here, and at $\vartheta = 0.7$ the theoretical boundaries of HC and the max test nearly coincide. For identification, BH finds 76--93\% of the strongest planted specialties ($r = 1.5$, about 27 rating points at the median pair) and Bonferroni about 53\%; in between lies a wide region where $\chi^2$ and HC$^+$ detect specialties that neither Bonferroni nor BH can locate. On the real board, all global statistics exceed their null 95\% points by a wide margin, well beyond this detection-only region.
 
 %====================================================================
 \section{Discussion}\label{sec:discussion}
@@ -367,7 +367,7 @@ Long query & $\ge 500$ user tokens & 164,230 & 99 & 108 & 19 \\
 \end{tabular}
 \end{table}
 
-For the tested pairs, our category-minus-overall ratings have correlation at least 0.999 with the official ones. Below 200 battles a few old models disagree with the official category boards by up to 408 points; the official values suggest that the fit may not have converged (three Russian models share an identical rating), which motivated the 200-battle minimum. The null 95\% points in \cref{tab:q3} use the same 500 draws that set the standardization; with leave-one-out standardization they are 1,036 for $\chi^2$ and 4.12 for $\max|z^*|$, and no $p$-value changes. The sizes of the global tests under the null, from fresh draws, are 0.06 (HC), 0.05 (HC$^+$), 0.05 (min-$P$) and 0.08 ($\chi^2$); only $\chi^2$ exceeds 5\%, by 2.4 Monte Carlo SEs. In the power simulation BH's false discovery proportion ranges from 0.01 to 0.12 across the grid, often well below 10\%, and Bonferroni's probability of any false discovery is 6.5\% with no specialties and at most 9\% across the 30 cells, consistent with 5\% at a Monte Carlo SE of about 0.02. Categories overlap (many coding battles are also hard prompts), so a specialty planted in one category also moves the model in overlapping categories; such discoveries (0--23\% of all discoveries) are counted as spillovers, not as false.
+For the tested pairs, our category-minus-overall ratings have correlation at least 0.999 with the official ones. Below 200 battles a few old models disagree with the official category boards by up to 408 points; the official values suggest that the fit may not have converged (three Russian models share an identical rating), which motivated the 200-battle minimum. The null 95\% points in \cref{tab:q3} use the same 500 draws that set the standardization; with leave-one-out standardization they are 1,036 for $\chi^2$ and 4.12 for $\max|z^*|$, and no $p$-value changes. The sizes of the global tests under the null, from fresh draws, are 0.06 (HC), 0.05 (HC$^+$), 0.05 (min-$P$) and 0.08 ($\chi^2$); only $\chi^2$ exceeds 5\%, by 2.4 Monte Carlo SEs. The identification simulation records custom attribution diagnostics, which do not establish standard FDR/FWER control (Appendix~\ref{app:limits}).
 
 \begin{figure}[!ht]
 \centering
@@ -375,14 +375,14 @@ For the tested pairs, our category-minus-overall ratings have correlation at lea
 \caption{Estimated specialties (category rating minus overall rating, centered within the category) of the 40 highest-rated models; dots mark pairs that pass Bonferroni.}\label{fig:q3map}
 \end{figure}
 
-\FloatBarrier
+\clearpage
 \subsection{Further limitations and deviations from the proposal}\label{app:limits}
 
 \begin{itemize}
 \item The truth $\beta^*$ is itself an estimate and is slightly more spread out than the real strengths, which makes ranking a little easier in the simulation than in reality. The stress tests change the strengths but not the comparison graph or the number of models.
 \item The normal approximation is weakest for models with few battles; the smallest model in the 2024 data has 1,193 battles.
 \item In Q3 the overall fit absorbs part of each specialty, most in the largest categories (median null SD 0.81 for instruction following, which contains 35\% of battles, against 0.95 for Chinese); an overall fit that leaves the category out would avoid this. An empirical null \citep{efron2004large} would be a principled alternative to the bootstrap null.
-\item BH's FDR guarantee assumes positive dependence, which the $z^*$ need not satisfy; the simulated false discovery proportions (at most 12\%) are our evidence that it holds approximately.
+\item BH's FDR guarantee requires assumptions on the null $p$-values and their dependence that we have not established here. The simulation counts an \emph{attribution error} for a discovery in an unplanted model or a wrong-sign discovery at a planted pair. Other unplanted discoveries in planted models are excluded, without establishing whether their effects are real. BH's mean error share is 0.01--0.12; Bonferroni's probability of any such error is at most 9\%. These custom diagnostics do not establish FDR/FWER control: overlap, opponents and refitting can induce effects beyond the planted pairs. Only with no planting is every discovery false: BH FDR is 0.105 (SE 0.022), Bonferroni FWER 0.065 (SE 0.017).
 \item Not carried out from the proposal: bootstrap rank intervals as a marginal benchmark; BH on the pairwise tests; fully synthetic worlds with other comparison graphs and numbers of models; and a low-rank-plus-sparse decomposition that removes a general-ability component before testing for specialties. We also replaced the proposal's 2025 data sample by the 2024 dump, for the answer key described in \cref{sec:data}.
 \end{itemize}
 

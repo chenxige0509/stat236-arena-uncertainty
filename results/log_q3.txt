@@ -1,10 +1,10 @@
 1,657,517 battles, 129 models, 8 categories, 176,390 (pair, pattern) groups
 tested pairs (>= 200 battles): 958 of 1032; per category: coding 128, math 126, instruction_following 129, hard_prompts 129, chinese 115, russian 95, multi_turn 128, long_query 108
-  null 100/500, 24s
-  null 200/500, 48s
-  null 300/500, 73s
-  null 400/500, 97s
-  null 500/500, 121s
+  null 100/500, 20s
+  null 200/500, 40s
+  null 300/500, 61s
+  null 400/500, 82s
+  null 500/500, 103s
 null z: mean of means -0.001, SD median 0.919 [0.696, 1.050] (an uncalibrated z would assume 0 and 1)
 
 Step 1: is there any specialty? (p-values from the null simulation)
@@ -12,7 +12,7 @@ statistic  observed  null_median  null_95  p_bootstrap
     min_p         0       0.7697  0.04967     0.001996
 max_abs_z     40.25        3.352    4.047     0.001996
      chi2 2.121e+04        954.1     1028     0.001996
-       hc 1.221e+62        1.774    4.422     0.001996
+       hc 1.98e+175        1.774    4.422     0.001996
   hc_plus     329.7        1.579    3.069     0.001996
 
 Step 2: which ones?  Bonferroni (alpha 0.05, bar p < 5.2e-05): 275;  BH (q 0.10): 525;  naive p < 0.05: 521 (about 48 by chance)

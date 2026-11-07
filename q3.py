@@ -20,8 +20,8 @@ category).
 What the results establish (numbers from the current run, 500 null replicates):
   - Calibration matters: under the null the raw z_mc have SD 0.70-1.05 (median 0.92), not 1.
   - Step 1: every global test rejects at the smallest p the simulation can give (1/501). HC+ = 330 against a null
-    95% point of 3.1; chi^2 = 21,210 against 1,028; max |z*| = 40 against 4.0. Plain HC is ~1e62 because p_(1)
-    underflows to ~0, which is why HC+ (p > 1/N only) is the usable version here.
+    95% point of 3.1; chi^2 = 21,210 against 1,028; max |z*| = 40 against 4.0. Plain HC is ~1.98e175,
+    computed from log normal tails without dropping p_(1). HC+ (p > 1/N only) excludes these extreme tails.
   - Step 2: Bonferroni finds 275 of the 958 tested pairs, BH (10%) 525; naive p < 0.05 gives 521, where about 48
     would be expected by chance. 94 of the 129 models have at least one Bonferroni specialty, in every category
     (17-40% of pairs). Their size (centered category rating - overall rating) has median |24.8| points.

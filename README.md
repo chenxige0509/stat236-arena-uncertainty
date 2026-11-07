@@ -106,7 +106,7 @@ The 2024 snapshot also holds the official category boards. Q3 asks whether a mod
 | BH (10%) | 525 |
 | Naive p < 0.05 | 521 (about 48 expected by chance) |
 
-Under this null the 2024 specialties are neither rare nor weak. 94 of the 129 models have at least one Bonferroni specialty, and every category has some (17–40% of its pairs), with median size 25 points (category rating minus overall rating, centered within the category). The largest are language effects: `llama-3-70b-instruct` is 73 points weaker in Chinese (z = −40), and Qwen models are about 60 points stronger. Plain HC is about 10^62: the smallest p-value underflows to 0 and is dropped, and HC is then driven by the second smallest (2.8 × 10^−127), since it grows like 1/√p. HC+, which only uses p > 1/N, is the usable version.
+Under this null the 2024 specialties are neither rare nor weak. 94 of the 129 models have at least one Bonferroni specialty, and every category has some (17–40% of its pairs), with median size 25 points (category rating minus overall rating, centered within the category). The largest are language effects: `llama-3-70b-instruct` is 73 points weaker in Chinese (z = −40), and Qwen models are about 60 points stronger. Plain HC is about 1.98 × 10^175, driven by the smallest p-value (log10 p ≈ −353.6). It is computed from log normal tails, so this observation is retained despite p-value underflow. HC+, which only uses p > 1/N, excludes these extreme tails.
 
 The count of specialties depends on the null's noise level. The null redraws battles independently, so it ignores correlated votes (same user or session, time clusters) and misfit of the Bradley–Terry model. On the real board the standardized z have a robust SD of 3.3, against 1 under the null. If the true noise were 1.5, 2 or 3 times the null's, Bonferroni would find 149, 76 or 26 specialties instead of 275. That some specialties exist is robust; how many is not.
 
@@ -118,9 +118,11 @@ The count of specialties depends on the null's noise level. The null redraws bat
 | Middle: ϑ = 0.5 (31), r = 0.4 (≈ 14 points) | 0.88 | 0.94 | 0.56 | 0.95 |
 | Sparse: ϑ = 0.7 (8), r = 0.8 (≈ 20 points) | 0.84 | 0.72 | 0.74 | 0.62 |
 
-χ² and HC+ are best for dense effects, where min-P is far behind. For the sparsest effects χ² falls behind and plain HC is best. This is the ordering Lecture 3 predicts, but the gap is modest: with N = 958 it only shows at the sparse end of the grid. For identification, BH finds 76–93% of 27-point specialties and Bonferroni about 53%. BH's false discovery proportion stays at or below about 12% (0.01–0.12 across the grid), often far below 10%, partly because discoveries in a planted model's other categories count as spillovers rather than as false. Bonferroni's chance of any false discovery is a little above 5% (6.5% with no specialties, up to 9% on the grid), probably because each null SD is estimated from only 500 draws. Categories overlap (many coding battles are also hard prompts), so a planted specialty also raises the model in overlapping categories. Those discoveries (1–23%) are counted as spillovers, not as false.
+χ² and HC+ are best for dense effects, where min-P is far behind. For the sparsest effects χ² falls behind and plain HC is best. This is the ordering Lecture 3 predicts, but the gap is modest: with N = 958 it only shows at the sparse end of the grid. For identification, BH finds 76–93% of 27-point specialties and Bonferroni about 53%. For a custom attribution diagnostic, discoveries at planted pairs with the planted sign count as correct; unplanted pairs in a model with any planting are recorded separately; all other discoveries count as attribution errors. BH's mean attribution-error share is 0.01–0.12, and Bonferroni's probability of any attribution error is at most 9% across the grid. The same-model unplanted discoveries (0–23%) are not verified as true effects: overlapping categories, opponents and refitting complicate their interpretation. These diagnostics do not establish standard FDR or FWER control. With no planting only, every discovery is false: BH FDR is 0.105 (MC SE 0.022), and Bonferroni FWER is 0.065 (MC SE 0.017).
 
-Figures (`q3_figures.py`): power of the four global tests on the whole grid (`docs/figures/q3_power.png`), Bonferroni and BH against their targets (`q3_identification.png`), the real z* against N(0, 1) (`q3_real_z.png`), and the specialty map of the 40 highest-rated models (`q3_specialties.png`).
+The power-grid values are retained from the original run; the 2026-11-07 correction renames its custom diagnostic columns without changing the numbers. The full grid was not rerun after the HC numerical fix. The real-board HC and its null calibration are recomputed with the corrected code.
+
+Figures (`q3_figures.py`): power of the four global tests on the whole grid (`docs/figures/q3_power.png`), planted-pair detection and custom attribution diagnostics (`q3_identification.png`), the real z* against N(0, 1) (`q3_real_z.png`), and the specialty map of the 40 highest-rated models (`q3_specialties.png`).
 
 **Limitations.** The null is exact Bradley–Terry with fixed strengths, so anything else that varies with the category also shows up as a specialty, such as strengths drifting over time while the category mix changes, or voters who differ between languages. Only the 2024-08 snapshot is used, and the simulation is as idealized as in Q1.
 
@@ -143,6 +145,7 @@ python q1.py --reps 1000     # Q1: coverage of Arena's rank spread (semi-synthet
 python q1_analysis.py        # Q1 follow-up: which models have unstable ranks
 python q1_figures.py         # figures for docs/q1.md
 python test_pairwise.py      # Q2 pairwise procedures: checks against statsmodels
+python test_specialty.py     # HC formula and extreme-tail numerical regression checks
 python q2.py --reps 1000 --procedures arena,bonferroni,chi2,chi2_scheffe,pairwise_bonferroni,holm_onesided,holm   # Q2
 for a in "--beta-scale 0.5" "--beta-scale 0.25" "--beta-scale 0.1" "--tiers 20" "--tiers 10" \
          "--tiers 20 --tier-spread 0.05" "--tiers 20 --tier-spread 0.1" "--tiers 20 --tier-spread 0.2" "--beta-scale 0"; do

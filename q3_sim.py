@@ -20,13 +20,15 @@ Each replicate: draw outcomes, refit beta_hat, compute z*, standardized with Ste
                  rejection rate is the power. The 95% points come from fresh null draws, not from Step 2's: those
                  draws also set the standardization, and reusing them makes HC+ and chi^2 about twice too liberal
                  (size 0.10 instead of 0.05). A second set of fresh null draws checks the size of every test;
-  identification Bonferroni (5%) and BH (10%). Categories overlap (many coding battles are also hard prompts), so a
-                 specialty planted in (m, c) also changes m's true score in other categories. A discovery is therefore
-                   right      if it is a planted pair with the right sign;
-                   spillover  if it is not planted but its model has a planted specialty (a real, induced effect);
-                   false      if its model has no planted specialty, or it is a planted pair with the wrong sign.
-                 Reported: true positive rate (right / planted), false discovery proportion (false / discoveries),
-                 spillover share, and P(any false discovery).
+  identification Bonferroni (nominal 5%) and BH (nominal 10%). We report a custom attribution diagnostic:
+                   right      a planted pair with the planted sign;
+                   same-model unplanted  an unplanted pair whose model has any planted specialty;
+                   attribution error    every other discovery, including a planted pair with the wrong sign.
+                 The second group may include induced effects or null pairs; it is not verified as true spillover.
+                 Opponents and refitting can also induce effects in models with no planting. These labels therefore
+                 do not define pair-level null truth and do not establish standard FDR or FWER control.
+                 Reported: correct-sign planted TPR, attribution-error share, same-model unplanted share,
+                 and P(any attribution error). With no planting only, every discovery is a false discovery.
 
 What the results establish (numbers from the current run: 200 replicates per cell, 2 x 400 fresh null draws):
   - Size: HC 0.060, HC+ 0.050, min-P 0.052, chi^2 0.083 (MC SE 0.011, plus the error of the estimated 95% point).
@@ -37,9 +39,10 @@ What the results establish (numbers from the current run: 200 replicates per cel
     HC+ 0.72, chi^2 0.62). This is the ordering Lecture 3 predicts, but on a narrow range: with N = 958 the
     asymptotic separation between HC and chi^2 only shows at the sparse end of the grid.
   - Identification: Bonferroni finds about 53% of the planted specialties at mu = 4.5 (27 points) and 16-19% at
-    mu = 3.3; BH about 76-93% and 32-74%. BH's false discovery proportion stays near its 10% target (0.09-0.12,
-    MC SE 0.01-0.02) and Bonferroni's P(any false discovery) near 5% (0.02-0.09). Separately, 1-23% of discoveries
-    are spillovers into other categories of a planted model, which category overlap makes real effects.
+    mu = 3.3; BH about 76-93% and 32-74%. Across the grid, BH's mean attribution-error share is 0.01-0.12,
+    and Bonferroni's P(any attribution error) is at most 0.09. Same-model unplanted discoveries account for
+    0-23% of discoveries. These are custom diagnostics, not validation of FDR/FWER under mixed alternatives.
+    With no planting, BH FDR is 0.105 (MC SE 0.022) and Bonferroni FWER is 0.065 (MC SE 0.017).
 So the HC advantage of the theory exists here but is modest; on the real 2024 board (Step 2) the effects are dense
 and large, where chi^2 and HC+ both work and HC's advantage does not matter.
 
@@ -129,7 +132,7 @@ for k, (th, r) in enumerate(cells):
     s = 0 if th is None else max(1, int(round(N ** (1 - th))))
     mu = np.sqrt(2 * r * np.log(N)) if s else 0.0
     rec = {key: [] for key in TESTS + [f"{a}_{b}" for a in ("bonf", "bh")
-                                       for b in ("n", "tpr", "fdp", "spill", "any_false")] + ["planted_abs_z"]}
+                                       for b in ("n", "tpr", "attribution_error_share", "same_model_unplanted_share", "any_attribution_error")] + ["planted_abs_z"]}
     for _ in range(args.reps):
         delta = np.zeros((M, C))
         planted = rng.choice(N, s, replace=False) if s else np.array([], dtype=int)
@@ -148,14 +151,14 @@ for k, (th, r) in enumerate(cells):
         p = two_sided_p(zs)
         for name, found in [("bonf", bonferroni(p)), ("bh", benjamini_hochberg(p))]:
             right = found & is_planted & (np.sign(zs) == truth)
-            spill = found & ~is_planted & model_planted
-            false = found & ~right & ~spill
+            same_model_unplanted = found & ~is_planted & model_planted
+            attribution_error = found & ~right & ~same_model_unplanted
             n_found = max(found.sum(), 1)
             rec[f"{name}_n"].append(found.sum())
             rec[f"{name}_tpr"].append(right.sum() / s if s else np.nan)
-            rec[f"{name}_fdp"].append(false.sum() / n_found)
-            rec[f"{name}_spill"].append(spill.sum() / n_found)
-            rec[f"{name}_any_false"].append(false.any())
+            rec[f"{name}_attribution_error_share"].append(attribution_error.sum() / n_found)
+            rec[f"{name}_same_model_unplanted_share"].append(same_model_unplanted.sum() / n_found)
+            rec[f"{name}_any_attribution_error"].append(attribution_error.any())
         rec["planted_abs_z"].append(np.abs(zs[planted]).mean() if s else np.nan)
     row = {"theta": th, "r": r, "s": s, "mu": mu,
            "delta_points_median": float(np.median(mu * unit) * ALPHA) if s else 0.0}
@@ -165,7 +168,7 @@ for k, (th, r) in enumerate(cells):
     print(f"[{k + 1}/{len(cells)}] theta {th} r {r}: s={s} mu={mu:.2f} ({row['delta_points_median']:.1f} pts), "
           f"realized |z*| {row['planted_abs_z']:.2f} | power HC {row['hc']:.2f} HC+ {row['hc_plus']:.2f} "
           f"min-P {row['max_abs_z']:.2f} chi2 {row['chi2']:.2f} | Bonf TPR {row['bonf_tpr']:.2f} "
-          f"BH TPR {row['bh_tpr']:.2f} FDP {row['bh_fdp']:.2f} spill {row['bh_spill']:.2f} | {time.time() - t_start:.0f}s", flush=True)
+          f"BH TPR {row['bh_tpr']:.2f} attribution-error share {row['bh_attribution_error_share']:.2f} same-model unplanted {row['bh_same_model_unplanted_share']:.2f} | {time.time() - t_start:.0f}s", flush=True)
 
 out = pd.DataFrame(rows)
 out.to_csv("results/q3_sim.csv", index=False)

@@ -75,26 +75,21 @@ fig.text(0.01, -0.02, f"Size with no specialties: HC {size_row.hc:.2f}, HC+ {siz
 fig.tight_layout()
 save(fig, "q3_power.png")
 
-# ---------------------------------------------------------------- 2. identification: TPR and false discoveries
+# ---------------------------------------------------------------- 2. identification: TPR and custom attribution diagnostics
 fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 3.8))
 styles = {thetas[0]: "-", thetas[-1]: (0, (4, 2))}
 for th, ls in styles.items():
     g = grid[grid.theta == th].sort_values("mu")
     a1.plot(g.mu, g.bonf_tpr, color=BLUE, lw=2, ls=ls, marker="o", ms=5, mec=SURFACE)
     a1.plot(g.mu, g.bh_tpr, color=ORANGE, lw=2, ls=ls, marker="s", ms=5, mec=SURFACE)
-    a2.plot(g.mu, g.bonf_any_false, color=BLUE, lw=2, ls=ls, marker="o", ms=5, mec=SURFACE)
-    a2.plot(g.mu, g.bh_fdp, color=ORANGE, lw=2, ls=ls, marker="s", ms=5, mec=SURFACE)
+    a2.plot(g.mu, g.bonf_any_attribution_error, color=BLUE, lw=2, ls=ls, marker="o", ms=5, mec=SURFACE)
+    a2.plot(g.mu, g.bh_attribution_error_share, color=ORANGE, lw=2, ls=ls, marker="s", ms=5, mec=SURFACE)
 a1.set_title("Share of planted specialties found")
 a1.set_ylabel("true positive rate")
 a1.set_ylim(-0.03, 1.03)
-a2.set_title("Errors against their targets")
-a2.set_ylabel("error rate")
-a2.axhline(0.10, color=ORANGE, lw=1, ls=(0, (1, 2)))
-a2.axhline(0.05, color=BLUE, lw=1, ls=(0, (1, 2)))
-x_end = grid.mu.max() + 0.12
-a2.text(x_end, 0.103, "BH target\nFDR 0.10", color=INK2, fontsize=8, ha="left", va="bottom")
-a2.text(x_end, 0.053, "Bonferroni target\nFWER 0.05", color=INK2, fontsize=8, ha="left", va="bottom")
-a2.set_xlim(right=grid.mu.max() + 1.0)
+a2.set_title("Custom attribution diagnostics")
+a2.set_ylabel("share / probability")
+a2.set_xlim(right=grid.mu.max() + 0.2)
 a2.set_ylim(0, 0.2)
 for ax in (a1, a2):
     ax.set_xlabel("planted size μ (z units)")
@@ -103,8 +98,8 @@ handles = [Line2D([], [], color=BLUE, lw=2, marker="o", mec=SURFACE, label="Bonf
            Line2D([], [], color=INK2, lw=1.5, ls="-", label=f"ϑ = {thetas[0]:g} (dense)"),
            Line2D([], [], color=INK2, lw=1.5, ls=(0, (4, 2)), label=f"ϑ = {thetas[-1]:g} (sparse)")]
 fig.legend(handles=handles, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.06))
-fig.text(0.01, -0.04, "Right panel: BH's false discovery proportion and Bonferroni's chance of any false discovery. "
-         "Spillovers into overlapping categories of a planted model are not counted as false.", color=INK2, fontsize=8.5)
+fig.text(0.01, -0.04, "Right: BH mean attribution-error share; Bonferroni P(any attribution error). These are not FDR/FWER.\n"
+         "Same-model unplanted discoveries are excluded without establishing whether their effects are real.", color=INK2, fontsize=8.5)
 fig.tight_layout()
 save(fig, "q3_identification.png")
 

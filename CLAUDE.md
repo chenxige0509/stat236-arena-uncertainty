@@ -68,8 +68,8 @@ The pipeline: `step0.py` validates the method against the official answer key. `
 - In `step0_2026.py`, the mean rank-spread width is 26.4 both for the site's top 59 and for all 414 models. That is a coincidence of this board, not a copied number.
 - In `q3_step0.py`, a few old models with under 100 category battles differ from the official category rating by up to 408 points (Russian: `fastchat-t5-3b`, `stablelm-tuned-alpha-7b`, `chatglm2-6b`; long query: `RWKV-4-Raven-14B`). The official values look like a non-converged fit (identical ratings and bootstrap draws for three models). `MIN_BATTLES` excludes these pairs.
 - Each official category board has its own `last_updated_tstamp` (Chinese is 10 minutes before the overall board), so `q3_step0.py` cuts each category at its own time.
-- Plain HC in `results/q3_global.csv` is about 1e62 because the smallest p-value underflows to 0. HC+ is the usable statistic there.
-- In `q3_sim.py`, many discoveries outside the planted pairs are not errors. Categories overlap, so a specialty planted in (m, c) also raises m in overlapping categories. These are counted as `spill`, separately from `fdp`.
+- Plain HC in `results/q3_global.csv` is about 1.98e175. `global_stats` computes HC from log normal tails to retain the most extreme observation; do not filter out infinite positive HC as missing. HC+ excludes p <= 1/N. `test_specialty.py` covers the underflow regression.
+- In `q3_sim.py`, `same_model_unplanted_share`, `attribution_error_share` and `any_attribution_error` are custom attribution diagnostics, not standard FDR/FWER. Same-model unplanted discoveries are not verified as true spillovers, and effects may also propagate to opponents. Only the no-planting case makes every discovery a false discovery.
 
 ## Conventions
 

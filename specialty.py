@@ -122,29 +122,35 @@ def two_sided_p(z):
     return 2 * norm.sf(np.abs(z))
 
 
-def higher_criticism(p, alpha0=0.5, plus=False):
+def higher_criticism(p, alpha0=0.5, plus=False, *, log_p=False):
     """Donoho & Jin (2004): HC = max over k <= alpha0 N of sqrt(N) (k/N - p_(k)) / sqrt(p_(k) (1 - p_(k))).
-    plus=True is HC+, which only uses p_(k) > 1/N (Lecture 2). Returns (HC, k at the max)."""
-    p = np.sort(np.asarray(p, dtype=float))
-    N = len(p)
+    plus=True is HC+, which only uses p_(k) > 1/N (Lecture 2). Returns (HC, k at the max).
+    With log_p=True, the input is log(p); this retains extreme normal tails that would underflow to zero.
+    Infinite positive HC values are evidence, not missing observations, and must not be discarded."""
+    with np.errstate(divide="ignore"):
+        lp = np.sort(np.asarray(p, dtype=float) if log_p else np.log(np.asarray(p, dtype=float)))
+    N = len(lp)
     k = np.arange(1, N + 1)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        hc = np.sqrt(N) * (k / N - p) / np.sqrt(p * (1 - p))
+    numerator = k / N - np.exp(lp)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        log_abs_hc = (0.5 * np.log(N) + np.log(np.abs(numerator))
+                      - 0.5 * (lp + np.log(-np.expm1(lp))))
+        hc = np.sign(numerator) * np.exp(log_abs_hc)
     ok = k <= alpha0 * N
     if plus:
-        ok &= p > 1 / N
-    hc = np.where(ok & np.isfinite(hc), hc, -np.inf)
+        ok &= lp > -np.log(N)
+    hc = np.where(ok & ~np.isnan(hc), hc, -np.inf)
     return float(hc.max()), int(hc.argmax()) + 1
 
 
 def global_stats(zs):
-    """The three global statistics on standardized specialties z* (1-D array over the tested pairs)."""
-    p = two_sided_p(zs)
-    return {"min_p": float(len(p) * p.min()),       # Bonferroni-adjusted smallest p (small = evidence)
+    """Global statistics on standardized specialties z*; HC uses log tails to avoid losing extreme signals."""
+    lp = np.log(2) + norm.logsf(np.abs(zs))
+    return {"min_p": float(np.exp(np.log(len(lp)) + lp.min())),  # may underflow; max_abs_z is equivalent
             "max_abs_z": float(np.abs(zs).max()),   # the same test on the z scale (large = evidence)
             "chi2": float((zs ** 2).sum()),
-            "hc": higher_criticism(p)[0],
-            "hc_plus": higher_criticism(p, plus=True)[0]}
+            "hc": higher_criticism(lp, log_p=True)[0],
+            "hc_plus": higher_criticism(lp, plus=True, log_p=True)[0]}
 
 
 def bonferroni(p, alpha=0.05):
