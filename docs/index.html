@@ -151,6 +151,8 @@ button.row:focus-visible { outline-offset: -2px; }
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.4rem 2.6rem; }
 .rule-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.1rem 1.2rem; display: grid; gap: 0.6rem; }
 .formula { font-family: var(--mono); font-size: 0.9rem; line-height: 1.7; overflow-x: auto; white-space: nowrap; }
+/* JetBrains Mono turns #{ and similar pairs into ligatures; keep the characters as typed */
+.formula, .mono, .num, .spread-tag { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 .err { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.7rem; align-items: start; }
 .err .sign { font: 800 1.3rem/1 var(--display); color: var(--muted); padding-top: 0.15rem; }
 
