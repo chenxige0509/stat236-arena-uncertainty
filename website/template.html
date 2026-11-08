@@ -277,11 +277,11 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       <div class="stack col">
         <p class="eyebrow">Chatbot Arena · Bradley–Terry · multiple testing</p>
         <h1 id="h-hero">How certain is the Chatbot&nbsp;Arena leaderboard?</h1>
-        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing all the models at once. On the 2024 board of 129 models, we measured how often these ranges contain the true ranks, and how much wider they become under multiplicity corrections.</p>
+        <p class="lede">Arena ranks language models from millions of head-to-head votes and prints a range next to each one, such as <span class="spread-tag">rank 2–10</span>. That range is built from per-model 95% intervals with no correction for comparing all the models at once. Using a refit of the 2024 battles (129 models), we measured in simulated leaderboards how often these ranges contain the true ranks, and how much wider they become under multiplicity corrections.</p>
       </div>
       <div class="glance" aria-label="Main findings">
         <div class="g"><span class="gq">Q1</span><span class="gv">90.9%</span><span class="gk">of simulated leaderboards have all 129 rank spreads right. The target is 95%.</span></div>
-        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width with pairwise tests and Holm's correction, the narrowest of the corrections, all of which reached the 95% target in our simulations (Bonferroni: 13.6).</span></div>
+        <div class="g"><span class="gq">Q2</span><span class="gv">11.3 ranks</span><span class="gk">mean spread width over 1,000 simulated leaderboards with pairwise tests and Holm's correction, the narrowest of the corrections, all of which reached the 95% target in our simulations (Bonferroni: 13.6).</span></div>
         <div class="g"><span class="gq">Q3</span><span class="gv">275 of 958</span><span class="gk">model–category pairs pass Bonferroni as specialties, if our null's noise level is right.</span></div>
       </div>
       </div>
@@ -313,7 +313,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
       </div>
       <div class="rule-box" aria-label="The two effects">
         <div class="formula">best&nbsp;&nbsp;= 1 + #{ models with L &gt; my U }<br>worst = 1 + #{ others with U &gt; my L }</div>
-        <div class="err"><span class="sign">−</span><p class="small">Without a correction, 5% of the 95% intervals miss. With 129 models, about 6.7 miss in a typical dataset, and all 129 hold in almost none.</p></div>
+        <div class="err"><span class="sign">−</span><p class="small">Without a correction, 5% of the 95% intervals miss. With 129 models, about 6.7 miss in a typical simulated dataset, and all 129 hold in almost none.</p></div>
         <div class="err"><span class="sign">+</span><p class="small">The overlap rule works the other way: two models are separated only if their intervals do not touch. For two independent estimates with equal standard errors, that is a test of their difference at |z| &gt; 1.96·√2 = 2.77, a two-sided level of 0.6% instead of 5%.</p></div>
       </div>
     </div>
@@ -397,7 +397,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
     <div class="sec-head col">
       <p class="eyebrow">Q3 · Category leaderboards</p>
       <h2 id="h-q3">Category specialties</h2>
-      <p>Some category differences are clearly real, above all language effects of 50 to 84 rating points. Bonferroni flags 275 of 958 pairs under our simulated null, or 26 if the noise SD is assumed to be three times larger. These are sensitivity-analysis discovery counts, not estimates of the number of real effects. Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject "no specialties at all" with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
+      <p>Some category differences are clearly real, above all language effects of 50 to 84 rating points. On the real 2024 board, Bonferroni flags 275 of 958 pairs against a null calibrated by simulation, or 26 if the noise SD is assumed to be three times larger. These are sensitivity-analysis discovery counts, not estimates of the number of real effects. Arena also publishes boards for coding, math, Chinese and more. For each model and category with at least 200 battles we compare the model's score in that category with what its overall strength predicts, and standardize the gap (<em>z</em>*) against 500 simulated boards with no specialties. Higher Criticism, min-<em>P</em> and χ² all reject "no specialties at all" with <em>p</em> = 0.002, the smallest value 500 null draws can give. How many pairs to flag is less clear.</p>
     </div>
     <div class="hm-controls">
       <div class="slider">
@@ -419,7 +419,7 @@ footer { padding-block: 2rem 3rem; font-family: var(--display); font-size: 0.88r
   <section aria-labelledby="h-take">
     <div class="sec-head col"><p class="eyebrow">Summary</p><h2 id="h-take">Main results</h2></div>
     <div class="takeaways">
-      <div class="tk"><span class="n">Q1</span><h3>Coverage of Arena's rank spreads</h3><p class="small">Arena's spreads hold for the whole table 91% of the time because the two effects roughly offset each other. The method does not target this number. When models come in groups of exact ties it falls to 7–24%, and to 0.2% when all are tied.</p></div>
+      <div class="tk"><span class="n">Q1</span><h3>Coverage of Arena's rank spreads</h3><p class="small">In our simulation, Arena's spreads hold for the whole table 91% of the time because the two effects roughly offset each other. The method does not target this number. In simulated worlds with groups of exactly tied models it falls to 7–24%, and to 0.2% when all are tied.</p></div>
       <div class="tk"><span class="n">Q2</span><h3>Pairwise tests with Holm</h3><p class="small">A ranking depends only on the signs of pairwise differences. Pairwise tests with Holm met the 95% target in all our simulations, with intervals 18% narrower than Bonferroni's and three to four times narrower than the χ² set's.</p></div>
       <div class="tk"><span class="n">Real board</span><h3>223 orderings not supported by Holm</h3><p class="small">Of the 7,808 "A beats B" statements implied by Arena's intervals, Holm does not support 223 once all 8,256 pairs are counted. In the other direction, Holm separates no pair that Arena shows as tied.</p></div>
       <div class="tk"><span class="n">Q3</span><h3>Category specialties</h3><p class="small">The largest effects are language effects of 50–84 rating points. The number of significant specialties ranges from 275 at our null's noise level down to 26 if the real noise is three times larger.</p></div>
@@ -491,7 +491,7 @@ function renderBoard() {
   const meta = $("#board-meta"); meta.replaceChildren();
   [["Mean width, real board", S.realWidth.toFixed(1), "ranks per model"],
    ["All 129 right, simulation", pct(S.cover), "of 1,000 datasets (target 95%)"],
-   ["True orderings found", pct(S.power),
+   ["True orderings found, simulation", pct(S.power),
     S.anyFalse > 0 ? `but a false one in ${pct(S.anyFalse)} of datasets` : "never a false one in the simulation"]].forEach(([k, v, d]) => {
     const m = el("div", "metric"); m.append(el("span", "k", k), el("span", "v", v), el("span", "d", d)); meta.append(m);
   });
